@@ -12,10 +12,11 @@ def getDistance(point1, point2):
     # approximate radius of earth in km
     R = 6373.0
 
-    lat1 = radians(point1[0])
-    lon1 = radians(point1[1])
-    lat2 = radians(point2[0])
-    lon2 = radians(point2[1])
+    lon1 = radians(point1[0])
+    lat1 = radians(point1[1])
+
+    lon2 = radians(point2[0])
+    lat2 = radians(point2[1])
 
     dlon = lon2 - lon1
     dlat = lat2 - lat1
@@ -29,10 +30,11 @@ def getDistance(point1, point2):
 def getBearing(point1, point2):
     # provides initial bearing indegress from point1 to point2
 
-    lat1 = radians(point1[0])
-    lon1 = radians(point1[1])
-    lat2 = radians(point2[0])
-    lon2 = radians(point2[1])
+    lon1 = radians(point1[0])
+    lat1 = radians(point1[1])
+
+    lon2 = radians(point2[0])
+    lat2 = radians(point2[1])
 
     dlon = lon2 - lon1
     y = sin(dlon) * cos(lat2)
@@ -44,12 +46,14 @@ def getBearing(point1, point2):
     return(bearing)
 
 def main():
-    distance = getDistance((52.2296756, 21.0122287), (52.406374, 16.9251681))
-    bearing = getBearing([35, 45], [35, 135])
-    print("Calcuated distance: " + str(distance) + "\n")
-    print("True distance: 278.546 km \n")
-    print("Calculated bearing: " + str(bearing) + "\n")
-    print("True bearing: 60 degrees \n")
+    point1 = (-17.03663, 8.46696)
+    point2 = (-17.03663, 65.35996)
+    distance = getDistance(point1, point2)
+    bearing = getBearing(point1, point2)
+    print(f"Calcuated distance: {distance}")
+    print("True distance: 6328 km")
+    print(f"Calculated bearing: {bearing}")
+    print("True bearing: 0 degrees")
 
 if __name__ == "__main__":
     main()
