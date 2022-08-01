@@ -18,6 +18,6 @@ when I get the chance.
 As I was recently reminded, fire perimeters are only part of the
 problem when one is off-grid. Smoke and air-quality tracking and
 predition would also be incredibly useful services. I am currently
-working incorporating already extant API's for this purpose. However
+incorporating already extant API's for this purpose. However
 doing so will likely require a different architecture that what I have
 currently set up. 
