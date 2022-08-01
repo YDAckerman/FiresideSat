@@ -10,43 +10,44 @@ def getDistance(point1, point2):
     # get the distance between two points in km
     # points are tuples or lists in the form (lat, lon)
 
-    # approximate radius of earth in km
-    R = 6373.0
+        # approximate radius of earth in km
+        R = 6373.0
 
-    lon1 = radians(point1[0])
-    lat1 = radians(point1[1])
+        lon1 = radians(point1[0])
+        lat1 = radians(point1[1])
 
-    lon2 = radians(point2[0])
-    lat2 = radians(point2[1])
+        lon2 = radians(point2[0])
+        lat2 = radians(point2[1])
 
-    dlon = lon2 - lon1
-    dlat = lat2 - lat1
+        dlon = lon2 - lon1
+        dlat = lat2 - lat1
 
-    a = sin(dlat / 2)**2 + cos(lat1) * cos(lat2) * sin(dlon / 2)**2
-    c = 2 * atan2(sqrt(a), sqrt(1 - a))
+        a = sin(dlat / 2)**2 + cos(lat1) * cos(lat2) * sin(dlon / 2)**2
+        c = 2 * atan2(sqrt(a), sqrt(1 - a))
 
-    # return in km
-    return(R * c)
+        # return in km
+        return(R * c)
 
 def getBearing(point1, point2):
-    # provides initial bearing indegress from point1 to point2
-    # sourced from
-    # https://www.movable-type.co.uk/scripts/latlong.html
+        # provides initial bearing indegress from point1 to point2
+        # sourced from
+        # https://www.movable-type.co.uk/scripts/latlong.html
 
-    lon1 = radians(point1[0])
-    lat1 = radians(point1[1])
+        lon1 = radians(point1[0])
+        lat1 = radians(point1[1])
 
-    lon2 = radians(point2[0])
-    lat2 = radians(point2[1])
+        lon2 = radians(point2[0])
+        lat2 = radians(point2[1])
 
-    dlon = lon2 - lon1
-    y = sin(dlon) * cos(lat2)
-    x = cos(lat1) * sin(lat2) - sin(lat1) * cos(lat2) * cos(dlon)
-    theta = atan2(y, x)
-    # return in degrees
-    bearing = (theta*180/pi + 360) % 360
+        dlon = lon2 - lon1
+        y = sin(dlon) * cos(lat2)
+        x = cos(lat1) * sin(lat2) - sin(lat1) * cos(lat2) * cos(dlon)
+        theta = atan2(y, x)
+        # return in degrees
+        bearing = (theta*180/pi + 360) % 360
 
-    return(bearing)
+        return(bearing)
+
 
 class UserLocation:
 
@@ -65,6 +66,7 @@ class UserLocation:
     def getAllDistances(self, coords):
         point1 = self.point
         return([getDistance(point1, point2) for point2 in coords])
+
 
 class Perimeter:
 
@@ -104,9 +106,11 @@ class Perimeter:
 
 class Handler:
 
+
     def __init__(self):
         self.user_location = UserLocation()
         self.max_dist = 80 # km for now
+
 
     def response(self, lon, lat):
 
@@ -115,6 +119,7 @@ class Handler:
         self.setIncidentNames(self.max_dist)
         self.setIncidentPerimeters(self.incident_names)
         return(self.make_response())
+
 
     def setIncidentNames(self, max_dist):
 
@@ -129,6 +134,7 @@ class Handler:
         dists = pd.Series(dists)
         incident_names = fire_dt[dists < max_dist]['properties.IncidentName']
         self.incident_names = list(incident_names)
+
 
     def setIncidentPerimeters(self, incident_names):
 
@@ -150,6 +156,7 @@ class Handler:
             return(Perimeter(perimeter_rings))
 
         self.incident_perimeters = [getPerimeter(name) for name in incident_names]
+
 
     def make_response(self):
 
