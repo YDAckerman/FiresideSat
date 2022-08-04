@@ -30,4 +30,8 @@ conversations if they can initiate them. Instead I'm going to take a
 different approach using Garmin's MapShare feature. This won't be as
 responsive, since I'll have to be checking their periodically for
 updates, as opposed to running a lambda function on an sms
-trigger. But that will probably be fine enough.
+trigger. But that will probably be fine enough. From a cost
+perspective, this might actually be better, as messages FiresideSat
+sends will be billed on Garmin's end for that user. I won't get
+charged for twilio messages and I'll be able to keep aws resource
+usage 'fixed' per user. 
