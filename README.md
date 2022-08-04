@@ -21,3 +21,13 @@ predition would also be incredibly useful services. I am currently
 incorporating already extant API's for this purpose. However
 doing so will likely require a different architecture than what I have
 currently set up. 
+
+## Updates
+
+08-04-2022 - The current design of the project won't work because, as
+far as I can tell, both twilio and the sat phone will only have
+conversations if they can initiate them. Instead I'm going to take a
+different approach using Garmin's MapShare feature. This won't be as
+responsive, since I'll have to be checking their periodically for
+updates, as opposed to running a lambda function on an sms
+trigger. But that will probably be fine enough.
