@@ -3,6 +3,7 @@ import numpy as np
 import pickle
 from geofuns import getDistance, getBearing
 
+
 class Perimeter:
 
     def __init__(self, rings=None):
