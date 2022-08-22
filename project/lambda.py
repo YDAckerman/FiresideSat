@@ -1,5 +1,7 @@
+# DEPRECATED
+
+
 # import time
-import selenium
 import requests
 import pandas as pd
 import numpy as np

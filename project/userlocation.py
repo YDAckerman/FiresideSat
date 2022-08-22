@@ -1,3 +1,5 @@
+# DEPRECATED
+
 import time
 import pickle
 from geofuns import getDistance
