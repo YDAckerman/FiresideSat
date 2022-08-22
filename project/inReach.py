@@ -1,6 +1,5 @@
 import requests
 import configparser
-import os
 import json
 
 # three functions:
@@ -36,8 +35,6 @@ def get_last_message(user, pw):
     pass
 
 def main():
-
-    os.chdir('/Users/Yoni/Documents/FiresideSat/project')
 
     config = configparser.ConfigParser()
     config.read_file(open('inReach.cfg'))
