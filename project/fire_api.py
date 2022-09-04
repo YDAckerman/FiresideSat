@@ -8,47 +8,42 @@
 # https://www.nps.gov/subjects/air/current-data.htm
 # _________________________________________
 
-# incident point of origin
-# format:
-# FireDiscoveryDate: YYYY-MM-DD
-# POOState: US-CA, etc.
-incident_poo_url = """
-https://services3.arcgis.com/
-T4QMspbfLg3qTGWY/arcgis/rest/services/
-Current_WildlandFire_Locations/FeatureServer
-/0/query?f=json&where=
-(FireDiscoveryDateTime%20%>%3D%20DATE%20%27{}%27)
-%20AND%20
-(POOState%20IN%20('{}')
-%20AND%20
-(FireOutDateTime%20%>%3D%20DATE%20'{}')
-&outFields=*
-"""
-
-# incident perimeter
-# format:
-# poly_IncidentName: Washburn, etc.
-incident_perimeter_url = """
-https://services3.arcgis.com/
-T4QMspbfLg3qTGWY/arcgis/rest/services/
-Current_WildlandFire_Perimeters/
-FeatureServer/0/query?f=json&where=
-(POOState%20IN%20('{}'))
-%20AND%20
-(FireOutDateTime%20%IS%20%'NULL')
-&outFields=*
-"""
-
 import requests
 import json
-import math
-import pandas as pd
-
-url = "https://services3.arcgis.com/T4QMspbfLg3qTGWY/arcgis/rest/services/Current_WildlandFire_Locations/FeatureServer/0/query?f=json&where=(POOState='US-CA')&outFields=*"
-
-url = "https://services3.arcgis.com/T4QMspbfLg3qTGWY/arcgis/rest/services/Current_WildlandFire_Locations/FeatureServer/0/query?f=json&where=(POOState='US-CA')&outFields=*"
+from perimeter import Perimeter
 
 
-fire_json = json.loads(requests.get(url).text)['features']
-fire_dt = pd.DataFrame.from_dict(pd.json_normalize(fire_json))
+class FireAPI:
 
+    api_call = "https://services3.arcgis.com/T4QMspbfLg3qTGWY/" + \
+        "arcgis/rest/services/Current_WildlandFire_Perimeters/" + \
+        "FeatureServer/0/query?f=json&where=" + \
+        "(irwin_POOState%20IN%20(%27US-CA%27))&outFields=*"
+
+    def __init__(self, loc):
+
+        perimeter_json = json.loads(requests.get(self.api_call).text)
+        self.perimeters = self.build_perimeters(perimeter_json)
+
+    def build_perimeters(json_response):
+
+        perimeter_dict = {
+            feature['attributes']['poly_IncidentName']:
+            {'behavior': feature['attributes']['irwin_FireBehaviorGeneral'],
+             'perimeter': Perimeter(feature['geometry']['rings'])}
+            for feature in json_response['features']
+        }
+
+        return(perimeter_dict)
+
+    def build_message(self, loc):
+
+        message = []
+        for fire in self.perimeters.keys():
+            dist = self.perimeters[fire]['perimeter'].getDist(loc)
+            edge = self.perimeters[fire]['perimeter'].nearest_node
+            status = self.perimeters[fire]['behavior']
+            if dist < 161:
+                message += f'NAME: {fire}, STATUS: {status}, EDGE: {edge} \n'
+
+        return(message)

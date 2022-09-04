@@ -8,11 +8,14 @@ from geofuns import getDistance, getBearing
 class Perimeter:
 
     def __init__(self, rings=None):
+
+        self.nearest_node = None
+        
         if rings is None:
             self.nodes = None
         else:
             self.nodes = np.asarray([j for i in rings for j in i])
-        self.nearest_node = None
+
 
     def isEmpty(self):
         if self.nodes is None:
@@ -29,16 +32,16 @@ class Perimeter:
     def getNearestPoint(self):
         return self.nearest_node
 
-    def getDistBearing(self, point):
+    def getDist(self, point):
         # sourced from:
         # https://www.movable-type.co.uk/scripts/latlong.html
         if self.nearest_node is None:
             self.setNearestPoint(point)
             point2 = self.nearest_node.tolist()
-            return getDistance(point, point2), getBearing(point, point2)
+            return getDistance(point, point2)
         else:
             point2 = self.nearest_node.tolist()
-            return getDistance(point, point2), getBearing(point, point2)
+            return getDistance(point, point2)
 
 
 def main():

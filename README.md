@@ -35,3 +35,15 @@ perspective, this might actually be better, as messages FiresideSat
 sends will be billed on Garmin's end for that user. I won't get
 charged for twilio messages and I'll be able to keep aws resource
 usage 'fixed' per user. 
+
+09-04-2022 - The new approach is taking shape. I'll end up using a
+chron job (I think) to monitor the device's KML feed and use the feed
+information to make decisions regard what information to send back to
+the device. I feel like the feed should be reporting more events, but
+so far, I've only seen "Tracking turned on" and "Tracking turned off"
+(despite having sent messages and set waypoints during tracking). It's
+minimal and not great, but that means I can just do fire monitoring
+while tracking is turned on (being careful not to repeat messages) and
+stop when tracking is turned off. I guess I can live with that until I
+figure out how to get the messages sent to the MapShare site, which so
+far has eluded me. 

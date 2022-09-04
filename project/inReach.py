@@ -3,6 +3,7 @@ import configparser
 import json
 import re
 
+
 def get_user_info(user, pw):
     #
     # - queries feed url
@@ -14,7 +15,7 @@ def get_user_info(user, pw):
     #     "?d1=2022-08-01T06:00z&d2=2022-10-01T15:00z"
     response = requests.get(url, auth=(user, pw))
 
-    coords = re.findall('<coordinates>(\S+),(\S+),(\S+)</coordinates>',
+    coords = re.findall(r'<coordinates>(\S+),(\S+),(\S+)</coordinates>',
                         response.text)[0]
 
     event = 'OTHER'
@@ -29,6 +30,7 @@ def get_user_info(user, pw):
             'event': event
             })
 
+
 def send_user_message(user, pw, device, msg):
     #
     # - posts message to user MapShare
@@ -40,6 +42,7 @@ def send_user_message(user, pw, device, msg):
              'messageText': msg}
     response = requests.post(url, auth=('', pw), json=myobj)
     return(json.loads(response.text)["success"])
+
 
 def main():
 
