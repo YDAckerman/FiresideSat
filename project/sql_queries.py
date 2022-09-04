@@ -5,9 +5,9 @@
 
 drop_users_table = "DROP TABLE IF EXISTS users"
 
-drop_trips_table = "DROP TABLE IF EXISTS trips"
+# drop_trips_table = "DROP TABLE IF EXISTS trips"
 
-drop_points_table = "DROP TABLE IF EXISTS points"
+# drop_points_table = "DROP TABLE IF EXISTS points"
 
 drop_time_table = "DROP TABLE IF EXISTS time"
 
@@ -20,29 +20,28 @@ create_users_table = """
 CREATE TABLE IF NOT EXISTS users (
 user_id INTEGER PRIMARY KEY AUTOINCREMENT,
 user_code TEXT NOT NULL,
-password TEXT NOT NULL,
+current_password TEXT NOT NULL,
 active BOOLEAN NOT NULL
 )
 """
 
-create_trips_table = """
-CREATE TABLE IF NOT EXISTS trips (
-trip_id INTEGER PRIMARY KEY AUTOINCREMENT,
-start_time_id INTEGER NOT NULL,
-end_time_id INTEGER
-)
-"""
+# create_trips_table = """
+# CREATE TABLE IF NOT EXISTS trips (
+# trip_id INTEGER PRIMARY KEY AUTOINCREMENT,
+# start_time_id INTEGER NOT NULL,
+# end_time_id INTEGER
+# )
+# """
 
-create_points_table = """
-CREATE TABLE IF NOT EXISTS points (
-point_id INTEGER PRIMARY KEY AUTOINCREMENT,
-user_id INTEGER NOT NULL,
-trip_id INTEGER NOT NULL,
-time_id INTEGER NOT NULL,
-long FLOAT NOT NULL,
-lat FLOAT NOT NULL
-)
-"""
+# create_points_table = """
+# CREATE TABLE IF NOT EXISTS points (
+# point_id INTEGER PRIMARY KEY AUTOINCREMENT,
+# user_id INTEGER NOT NULL,
+# time_id INTEGER NOT NULL,
+# long FLOAT NOT NULL,
+# lat FLOAT NOT NULL
+# )
+# """
 
 create_fires_table = """
 CREATE TABLE IF NOT EXISTS fires (

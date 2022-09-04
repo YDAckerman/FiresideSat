@@ -1,22 +1,33 @@
 import requests
 import configparser
 import json
+import re
 
-# three functions:
-# get last location
-# send message
-# get last message
-
-
-def get_user_feed(user, pw):
+def get_user_info(user, pw):
     #
     # - queries feed url
     # - returns json response
-    #
-    url = f"https://share.garmin.com/Feed/Share/{user}"
-    response = requests.get(url, auth=('', pw))
-    return(json.loads(response.text))
 
+    url = f"https://explore.garmin.com/feed/share/{user}"
+
+    # url = f"https://explore.garmin.com/feed/share/{user}" + \
+    #     "?d1=2022-08-01T06:00z&d2=2022-10-01T15:00z"
+    response = requests.get(url, auth=(user, pw))
+
+    coords = re.findall('<coordinates>(\S+),(\S+),(\S+)</coordinates>',
+                        response.text)[0]
+
+    event = 'OTHER'
+    if 'Tracking turned off' in response.text:
+        event = 'OFF'
+    elif 'Tracking turned on' in response.text:
+        event = 'ON'
+
+    return({'lon': float(coords[0]),
+            'lat': float(coords[1]),
+            'elv': float(coords[2]),
+            'event': event
+            })
 
 def send_user_message(user, pw, device, msg):
     #
@@ -30,24 +41,17 @@ def send_user_message(user, pw, device, msg):
     response = requests.post(url, auth=('', pw), json=myobj)
     return(json.loads(response.text)["success"])
 
-
-def get_last_message(user, pw):
-    pass
-
 def main():
 
     config = configparser.ConfigParser()
-    config.read_file(open('inReach.cfg'))
+    config.read_file(open('/Users/Yoni/Documents/FiresideSat/project/inReach.cfg'))
 
     device = int(config.get('GARMIN', 'DEVICE_ID'))
     user = config.get('GARMIN', 'USER_CODE')
     pw = config.get('GARMIN', 'PASSWORD')
 
-    print(get_user_feed(user, pw))
+    print(get_user_info(user, pw))
     print(send_user_message(user, pw, device, "Hello World!"))
-
-    pass
-
 
 if __name__ == '__main__':
     main()
