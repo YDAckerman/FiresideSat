@@ -3,6 +3,7 @@ from fire_api import FireAPI
 import configparser
 from log import log
 
+
 def main():
 
     config = configparser.ConfigParser()
@@ -15,20 +16,29 @@ def main():
     status = mini.get_user_info(user, pw)
     if status['event'] in ['ON', 'OTHER']:
         api = FireAPI()
-        api_hash = hash(api)
-        # get hash of previous message
-        with open('last_hash.txt', 'wr') as f:
-            last_hash = f.readlines()[-1]
-            if last_hash != api_hash:
+        with open('fireside_log.txt', 'wr') as f:
+            # use previously recorded hashes to make
+            # sure we don't send a message based on
+            # the same information twice
+            log_lines = f.readlines()
+            last_hash = log_lines[-1].split(" ")[-1]
+            old_hashes = [line.split(" ")[-1] for line in log_lines[0:-1]
+                          if 'INFO' in line]
+
+            if last_hash not in old_hashes:
                 msg = api.build_message(loc=[status['lon'], status['lat']])
-                if len(msg) > 0: # and hash is different from previous
-                    mini.send_user_message(user, pw, device, msg)
+                if len(msg) > 0:
+                    garmin_response = mini.send_user_message(user, pw,
+                                                             device, msg)
                     # log the response
-                    # https://docs.python.org/3/howto/logging.html
+                    log.info(f'RESPONSE:{garmin_response}')
                 else:
+                    log.info('NO NEW INCIDENTS')
                     # log that there were no new incidents to report
     else:
         # log that the device was in the OFF state
+        log.info('Tracking is turned OFF')
+
 
 if __name__ == '__main__':
     main()
