@@ -32,7 +32,7 @@ class FireAPI:
             for feature in perimeter_json['features']
         }
 
-        log.info(hash(str(self.perimeters)))
+        log.info("HASH:" + hash(str(self.perimeters)))
 
     def build_message(self, loc):
 
