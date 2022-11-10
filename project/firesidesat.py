@@ -17,6 +17,10 @@ def main():
     if status['event'] in ['ON', 'OTHER']:
         api = FireAPI()
         with open('fireside_log.txt', 'r') as f:
+
+            # TODO: This should be using sqlite or something
+            # note the log file...
+            
             # use previously recorded hashes to make
             # sure we don't send a message based on
             # the same information twice
