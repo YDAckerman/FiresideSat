@@ -5,13 +5,8 @@ import psycopg2
 import psycopg2.extras
 import configparser
 
-from sql_queries import drop_staging_tables_query
-from sql_queries import create_staging_tables_query
-from sql_queries import delete_staging_perimeter_query
-from sql_queries import insert_staging_incident_query
-from sql_queries import insert_staging_perimeter_query
-
-from api_calls import historic_wildfire_incidents_url
+import sql_queries as qry
+import api_calls as api
 
 # import pdb
 
@@ -65,9 +60,8 @@ def run(cur, url):
         perimeter_values = make_perimeter_values(incident_id, rings)
 
         # execute sql queries
-        cur.execute(insert_staging_incident_query, incident_values)
-        cur.execute(delete_staging_perimeter_query, (incident_id, ))
-        psycopg2.extras.execute_values(cur, insert_staging_perimeter_query,
+        cur.execute(qry.insert_staging_incident_query, incident_values)
+        psycopg2.extras.execute_values(cur, qry.insert_staging_perimeter_query,
                                        perimeter_values)
 
 
@@ -86,13 +80,11 @@ def main():
     cur = conn.cursor()
 
     # create tables
-    cur.execute(drop_staging_tables_query)
-    conn.commit()
-    cur.execute(create_staging_tables_query)
+    cur.execute(qry.create_staging_tables_query)
     conn.commit()
 
     # insert data
-    run(cur, historic_wildfire_incidents_url)
+    run(cur, api.historic_wildfire_incidents_url)
     conn.commit()
 
     # test
@@ -103,6 +95,13 @@ def main():
         for record in records:
             print(record)
 
+    # load staging data
+    # create updated/outdated
+    # delete outdated
+    # upsert incidents
+    # upsert perimeters
+    # upsert rings
+    
     conn.close()
 
 
