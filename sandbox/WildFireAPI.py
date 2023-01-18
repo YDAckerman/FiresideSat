@@ -64,16 +64,13 @@ def run(cur, url):
         psycopg2.extras.execute_values(cur, qry.insert_staging_perimeter,
                                        perimeter_values)
 
-
-def main():
+def test():
     """
     """
-    def print_table_size(cur, tbl):
-        print(f"{tbl} number of rows: ")
+    def get_table_size(cur, tbl):
         cur.execute(f"SELECT COUNT(*) FROM {tbl};")
         records = cur.fetchall()
-        for record in records:
-            print(record)
+        return(records[0][0])
 
     config = configparser.ConfigParser()
     config.read('./fireside.cfg')
@@ -92,9 +89,16 @@ def main():
     # create the schemas
     cur.execute(qry.create_schemas)
 
+    # only test against against the test schema
+    cur.execute("SET search_path TO test,public;")
+
     # drop/create current tables
     cur.execute(qry.drop_current_tables)
     cur.execute(qry.create_current_tables)
+
+    current_incident_count = []
+    outdated_incident_count = []
+    updated_incident_count = []
 
     for test_url in api.wildfire_incidents_test_urls:
 
@@ -104,25 +108,15 @@ def main():
         # load staging data
         run(cur, test_url)
 
-        # test:
-        print("staging rows: ")
-        print_table_size(cur, "staging.incidents")
-        print_table_size(cur, "staging.perimeters")
-
         # create updated/outdated
         cur.execute(qry.insert_updated_outdated)
-
-        # test:
-        print("update/outdate table sizes: ")
-        print_table_size(cur, "staging.incidents_updated")
-        print_table_size(cur, "staging.incidents_outdated")
+        updated_incident_count.append(
+            get_table_size(cur, "staging_incidents_updated"))
+        outdated_incident_count.append(
+            get_table_size(cur, "staging_incidents_outdated"))
 
         # delete outdated
-        print("post-delete rows: ")
         cur.execute(qry.delete_all_outdated)
-        print_table_size(cur, "current.incidents")
-        print_table_size(cur, "current.perimeters")
-        print_table_size(cur, "current.rings")
 
         # upsert incidents
         # upsert perimeters
@@ -131,12 +125,21 @@ def main():
         cur.execute(qry.upsert_current_perimeter)
         cur.execute(qry.upsert_current_ring)
 
-        print("post-upsert rows: ")
-        print_table_size(cur, "current.incidents")
-        print_table_size(cur, "current.perimeters")
-        print_table_size(cur, "current.rings")
+        current_incident_count.append(get_table_size(cur, "current_incidents"))
 
     conn.close()
+
+    return(updated_incident_count,
+           outdated_incident_count,
+           current_incident_count)
+
+
+def main():
+
+    updated, outdated, current = test()
+    print(updated)
+    print(outdated)
+    print(current)
 
 
 if __name__ == '__main__':
