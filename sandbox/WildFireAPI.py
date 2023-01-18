@@ -60,48 +60,82 @@ def run(cur, url):
         perimeter_values = make_perimeter_values(incident_id, rings)
 
         # execute sql queries
-        cur.execute(qry.insert_staging_incident_query, incident_values)
-        psycopg2.extras.execute_values(cur, qry.insert_staging_perimeter_query,
+        cur.execute(qry.insert_staging_incident, incident_values)
+        psycopg2.extras.execute_values(cur, qry.insert_staging_perimeter,
                                        perimeter_values)
 
 
 def main():
+    """
+    """
+    def print_table_size(cur, tbl):
+        print(f"{tbl} number of rows: ")
+        cur.execute(f"SELECT COUNT(*) FROM {tbl};")
+        records = cur.fetchall()
+        for record in records:
+            print(record)
 
     config = configparser.ConfigParser()
     config.read('./fireside.cfg')
 
     conn = psycopg2.connect(
-        database=config['DATABASE']['DB_NAME'],
-        user=config['DATABASE']['DB_USER'],
-        password=config['DATABASE']['DB_PASSWORD'],
-        host=config['DATABASE']['DB_HOST'],
+        database=config['DB']['DB_NAME'],
+        user=config['DB']['DB_USER'],
+        password=config['DB']['DB_PASSWORD'],
+        host=config['DB']['DB_HOST'],
     )
+
+    conn.autocommit = True
 
     cur = conn.cursor()
 
-    # create tables
-    cur.execute(qry.create_staging_tables_query)
-    conn.commit()
+    # create the schemas
+    cur.execute(qry.create_schemas)
 
-    # insert data
-    run(cur, api.historic_wildfire_incidents_url)
-    conn.commit()
+    # drop/create current tables
+    cur.execute(qry.drop_current_tables)
+    cur.execute(qry.create_current_tables)
 
-    # test
-    for table in ["incidents", "perimeters"]:
+    for test_url in api.wildfire_incidents_test_urls:
 
-        cur.execute(f"SELECT * FROM staging.{table} LIMIT 5;")
-        records = cur.fetchall()
-        for record in records:
-            print(record)
+        # create staging tables
+        cur.execute(qry.create_staging_tables)
 
-    # load staging data
-    # create updated/outdated
-    # delete outdated
-    # upsert incidents
-    # upsert perimeters
-    # upsert rings
-    
+        # load staging data
+        run(cur, test_url)
+
+        # test:
+        print("staging rows: ")
+        print_table_size(cur, "staging.incidents")
+        print_table_size(cur, "staging.perimeters")
+
+        # create updated/outdated
+        cur.execute(qry.insert_updated_outdated)
+
+        # test:
+        print("update/outdate table sizes: ")
+        print_table_size(cur, "staging.incidents_updated")
+        print_table_size(cur, "staging.incidents_outdated")
+
+        # delete outdated
+        print("post-delete rows: ")
+        cur.execute(qry.delete_all_outdated)
+        print_table_size(cur, "current.incidents")
+        print_table_size(cur, "current.perimeters")
+        print_table_size(cur, "current.rings")
+
+        # upsert incidents
+        # upsert perimeters
+        # upsert rings
+        cur.execute(qry.upsert_current_incident)
+        cur.execute(qry.upsert_current_perimeter)
+        cur.execute(qry.upsert_current_ring)
+
+        print("post-upsert rows: ")
+        print_table_size(cur, "current.incidents")
+        print_table_size(cur, "current.perimeters")
+        print_table_size(cur, "current.rings")
+
     conn.close()
 
 

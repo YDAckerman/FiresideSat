@@ -1,12 +1,18 @@
 
 
-create_schemas_query = """
+create_schemas = """
 CREATE SCHEMA IF NOT EXISTS staging;
 CREATE SCHEMA IF NOT EXISTS current;
 CREATE SCHEMA IF NOT EXISTS historic;
 """
 
-create_current_tables_query = """
+drop_current_tables = """
+DROP TABLE IF EXISTS current.incidents;
+DROP TABLE IF EXISTS current.perimeters;
+DROP TABLE IF EXISTS current.rings;
+"""
+
+create_current_tables = """
 CREATE TABLE IF NOT EXISTS current.incidents (
    incident_id varchar(256) PRIMARY KEY,
    incident_name varchar(256),
@@ -27,16 +33,19 @@ CREATE TABLE IF NOT EXISTS current.perimeters (
 );
 
 CREATE TABLE IF NOT EXISTS current.rings (
-  incident_id varchar(256) PRIMARY KEY,
+  incident_id varchar(256),
   ring_id integer NOT NULL,
   centroid_lat numeric(18,0),
   centroid_lon numeric(18,0)
 );
 """
 
-create_staging_tables_query = """
+create_staging_tables = """
 DROP TABLE IF EXISTS staging.incidents;
 DROP TABLE IF EXISTS staging.perimeters;
+DROP TABLE IF EXISTS staging.incidents_updated;
+DROP TABLE IF EXISTS staging.incidents_outdated;
+
 CREATE TABLE IF NOT EXISTS staging.incidents (
    incident_id varchar(256) PRIMARY KEY,
    incident_name varchar(256),
@@ -55,48 +64,46 @@ CREATE TABLE IF NOT EXISTS staging.perimeters (
   lon numeric(18,0),
   lat numeric(18,0)
 );
-"""
 
-create_updated_outdated_query = """
-CREATE TEMPORARY TABLE staging.incidents_updated(
-    incident_id varchar(256) PRIMARY KEY,
-);
-INSERT INTO staging.incidents_updated VALUES (
-    SELECT incident_id FROM staging.incidents
-    WHERE staging.incidents.incident_id NOT IN current.incidents.incident_id
-          OR (staging.incidents.incident_id = current.incidents.incident_id
-          AND staging.incidents.date_current > current.incidents.date_current)
+CREATE TABLE IF NOT EXISTS staging.incidents_updated(
+    incident_id varchar(256) PRIMARY KEY
 );
 
-CREATE TEMPORARY TABLE staging.incidents_outdated(
-    incident_id varchar(256) PRIMARY KEY,
-);
-INSERT INTO staging.incidents_outdated VALUES (
-    SELECT incident_id FROM current.incidents
-    WHERE current.incidents.incident_id NOT IN staging.incidents.incident_id
+CREATE TABLE IF NOT EXISTS staging.incidents_outdated(
+    incident_id varchar(256) PRIMARY KEY
 );
 """
 
-delete_all_outdated_query = """
+insert_updated_outdated = """
+INSERT INTO staging.incidents_updated (incident_id)
+SELECT si.incident_id AS incident_id
+FROM staging.incidents si
+LEFT JOIN current.incidents ci
+ON si.incident_id = ci.incident_id
+WHERE si.date_current > ci.date_current
+OR ci.date_current IS NULL;
+
+INSERT INTO staging.incidents_outdated (incident_id)
+SELECT incident_id FROM current.incidents
+WHERE current.incidents.incident_id NOT IN (
+      SELECT incident_id FROM staging.incidents
+);
+"""
+
+delete_all_outdated = """
 DELETE FROM current.incidents
-WHERE incident_id IN staging.incidents_outdated.incident_id;
+WHERE incident_id IN (SELECT incident_id FROM staging.incidents_outdated);
 DELETE FROM current.perimeters
-WHERE incident_id IN staging.incidents_outdated.incident_id;
+WHERE incident_id IN (SELECT incident_id FROM staging.incidents_outdated);
 DELETE FROM current.rings
-WHERE incident_id IN staging.incidents_outdated.incident_id;
+WHERE incident_id IN (SELECT incident_id FROM staging.incidents_outdated);
 """
 
-upsert_current_incident_query = """
-INSERT INTO staging.incidents (incident_id, incident_name,
-                                behavior, total_acres,
-                                percent_contained, date_created,
-                                date_current, centroid_lat,
-                                centroid_lon)
-VALUES (
-    SELECT * FROM staging.incidents
-    WHERE staging.incidents.incident_id IN
-          staging.incidents_updated.incident_id
-)
+upsert_current_incident = """
+INSERT INTO current.incidents
+SELECT * FROM staging.incidents
+WHERE staging.incidents.incident_id IN
+      (SELECT incident_id FROM staging.incidents_updated)
 ON CONFLICT (incident_id) DO
 UPDATE SET date_current      = EXCLUDED.date_current,
            centroid_lat      = EXCLUDED.centroid_lat,
@@ -106,38 +113,41 @@ UPDATE SET date_current      = EXCLUDED.date_current,
            percent_contained = EXCLUDED.percent_contained;
 """
 
-upsert_current_perimeter_query = """
+upsert_current_perimeter = """
 DELETE FROM current.perimeters
-WHERE current.perimeters.incident_id IN staging.incidents_updated.incident_id;
-INSERT INTO current.perimeters (incident_id, ring_id, lon, lat)
-VALUES (
-    SELECT * FROM staging.perimeters
-    WHERE staging.perimeters.incident_id IN
-          staging.incidents_updated.incident_id
-);
+WHERE current.perimeters.incident_id IN
+      (SELECT incident_id FROM staging.incidents_updated);
+INSERT INTO current.perimeters
+SELECT * FROM staging.perimeters
+WHERE staging.perimeters.incident_id IN
+      (SELECT incident_id FROM staging.incidents_updated);
 """
 
-upsert_current_ring_query = """
+upsert_current_ring = """
 DELETE FROM current.rings
-WHERE current.rings.incident_id IN staging.incidents_updated.incident_id;
-INSERT INTO current.rings (incident_id, ring_id, centroid_lon, centroid_lat)
-VALUES (
-    SELECT incident_id, ring_id, MEAN(lon), MEAN(lat) FROM
-    current.perimeters
-);
+WHERE current.rings.incident_id IN
+      (SELECT incident_id FROM staging.incidents_updated);
 
+INSERT INTO current.rings (incident_id, ring_id, centroid_lon, centroid_lat)
+SELECT incident_id, ring_id, AVG(lon), AVG(lat)
+FROM (
+   SELECT * FROM current.perimeters WHERE incident_id IN (
+        SELECT incident_id FROM staging.incidents_updated
+   )
+) as updated_perimeters
+GROUP BY incident_id, ring_id;
 """
 
-insert_staging_incident_query = """
+insert_staging_incident = """
 INSERT INTO staging.incidents (incident_id, incident_name,
-                                  behavior, total_acres,
-                                  percent_contained, date_created,
-                                  date_current, centroid_lat,
-                                  centroid_lon)
+                               behavior, total_acres,
+                               percent_contained, date_created,
+                               date_current, centroid_lat,
+                               centroid_lon)
 VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s);
 """
 
-insert_staging_perimeter_query = """
+insert_staging_perimeter = """
 INSERT INTO staging.perimeters (incident_id, ring_id, lon, lat)
 VALUES %s
 """
