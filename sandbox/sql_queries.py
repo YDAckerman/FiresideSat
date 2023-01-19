@@ -35,7 +35,11 @@ CREATE TABLE IF NOT EXISTS current_rings (
   incident_id varchar(256),
   ring_id integer NOT NULL,
   centroid_lat numeric(18,0),
-  centroid_lon numeric(18,0)
+  centroid_lon numeric(18,0),
+  bbox_max_lat numeric(18,0),
+  bbox_min_lat numeric(18,0),
+  bbox_max_lon numeric(18,0),
+  bbox_min_lon numeric(18,0)
 );
 """
 

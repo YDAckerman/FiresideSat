@@ -64,6 +64,7 @@ def run(cur, url):
         psycopg2.extras.execute_values(cur, qry.insert_staging_perimeter,
                                        perimeter_values)
 
+
 def test():
     """
     """
