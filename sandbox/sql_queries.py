@@ -31,9 +31,8 @@ CREATE TABLE IF NOT EXISTS current_perimeters (
   lat numeric(18,0)
 );
 
-CREATE TABLE IF NOT EXISTS current_rings (
+CREATE TABLE IF NOT EXISTS current_bounding_boxes (
   incident_id varchar(256),
-  ring_id integer NOT NULL,
   centroid_lat numeric(18,0),
   centroid_lon numeric(18,0),
   bbox_max_lat numeric(18,0),
@@ -98,7 +97,7 @@ DELETE FROM current_incidents
 WHERE incident_id IN (SELECT incident_id FROM staging_incidents_outdated);
 DELETE FROM current_perimeters
 WHERE incident_id IN (SELECT incident_id FROM staging_incidents_outdated);
-DELETE FROM current_rings
+DELETE FROM current_bounding_boxes
 WHERE incident_id IN (SELECT incident_id FROM staging_incidents_outdated);
 """
 
@@ -126,20 +125,30 @@ WHERE staging_perimeters.incident_id IN
       (SELECT incident_id FROM staging_incidents_updated);
 """
 
-upsert_current_ring = """
-DELETE FROM current_rings
-WHERE current_rings.incident_id IN
+upsert_current_bounding_box = """
+DELETE FROM current_bounding_boxes
+WHERE current_bounding_boxes.incident_id IN
       (SELECT incident_id FROM staging_incidents_updated);
 
-INSERT INTO current_rings (incident_id, ring_id, centroid_lon, centroid_lat)
-SELECT incident_id, ring_id, AVG(lon), AVG(lat)
+INSERT INTO current_bounding_boxes (incident_id,
+                                    centroid_lon, centroid_lat,
+                                    bbox_max_lat, bbox_min_lat,
+                                    bbox_max_lon, bbox_min_lon)
+SELECT incident_id, AVG(lon), AVG(lat),
+       MAX(lat), MIN(lat), MAX(lon), MIN(lon)
 FROM (
    SELECT * FROM current_perimeters WHERE incident_id IN (
         SELECT incident_id FROM staging_incidents_updated
    )
 ) as updated_perimeters
-GROUP BY incident_id, ring_id;
+GROUP BY incident_id;
 """
+
+select_bounding_boxes = """
+SELECT incident_id, bbox_min_lon, bbox_min_lat, bbox_max_lon, bbox_max_lat,
+FROM current_bounding_boxes;
+"""
+
 
 insert_staging_incident = """
 INSERT INTO staging_incidents (incident_id, incident_name,

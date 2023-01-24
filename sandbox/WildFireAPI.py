@@ -3,10 +3,10 @@ import json
 import datetime
 import psycopg2
 import psycopg2.extras
-import configparser
 
 import sql_queries as qry
 import api_calls as api
+import helpers as hlp
 
 # import pdb
 
@@ -48,6 +48,11 @@ def make_perimeter_values(incident_id, rings):
 def run(cur, url):
     """
     """
+
+    # create staging tables
+    cur.execute(qry.create_staging_tables)
+
+    # todo: error handling
     api_response = json.loads(requests.get(url).text)
 
     for feature in api_response['features']:
@@ -64,6 +69,19 @@ def run(cur, url):
         psycopg2.extras.execute_values(cur, qry.insert_staging_perimeter,
                                        perimeter_values)
 
+    # create updated/outdated
+    cur.execute(qry.insert_updated_outdated)
+
+    # delete outdated
+    cur.execute(qry.delete_all_outdated)
+
+    # upsert incidents
+    # upsert perimeters
+    # upsert rings
+    cur.execute(qry.upsert_current_incident)
+    cur.execute(qry.upsert_current_perimeter)
+    cur.execute(qry.upsert_current_bounding_box)
+
 
 def test():
     """
@@ -73,66 +91,26 @@ def test():
         records = cur.fetchall()
         return(records[0][0])
 
-    config = configparser.ConfigParser()
-    config.read('./fireside.cfg')
+    conn, cur = hlp.db_connect()
 
-    conn = psycopg2.connect(
-        database=config['DB']['DB_NAME'],
-        user=config['DB']['DB_USER'],
-        password=config['DB']['DB_PASSWORD'],
-        host=config['DB']['DB_HOST'],
-    )
+    hlp.test_db_up(cur)
 
-    conn.autocommit = True
-
-    cur = conn.cursor()
-
-    # create the schemas
-    cur.execute(qry.create_schemas)
-
-    # only test against against the test schema
-    cur.execute("SET search_path TO test,public;")
-
-    # drop/create current tables
-    cur.execute(qry.drop_current_tables)
-    cur.execute(qry.create_current_tables)
-
-    current_incident_count = []
-    outdated_incident_count = []
-    updated_incident_count = []
+    current = []
+    outdated = []
+    updated = []
 
     for test_url in api.wildfire_incidents_test_urls:
 
-        # create staging tables
-        cur.execute(qry.create_staging_tables)
-
-        # load staging data
+        # load data
         run(cur, test_url)
 
-        # create updated/outdated
-        cur.execute(qry.insert_updated_outdated)
-        updated_incident_count.append(
-            get_table_size(cur, "staging_incidents_updated"))
-        outdated_incident_count.append(
-            get_table_size(cur, "staging_incidents_outdated"))
-
-        # delete outdated
-        cur.execute(qry.delete_all_outdated)
-
-        # upsert incidents
-        # upsert perimeters
-        # upsert rings
-        cur.execute(qry.upsert_current_incident)
-        cur.execute(qry.upsert_current_perimeter)
-        cur.execute(qry.upsert_current_ring)
-
-        current_incident_count.append(get_table_size(cur, "current_incidents"))
+        updated.append(get_table_size(cur, "staging_incidents_updated"))
+        outdated.append(get_table_size(cur, "staging_incidents_outdated"))
+        current.append(get_table_size(cur, "current_incidents"))
 
     conn.close()
 
-    return(updated_incident_count,
-           outdated_incident_count,
-           current_incident_count)
+    return(updated, outdated, current)
 
 
 def main():
