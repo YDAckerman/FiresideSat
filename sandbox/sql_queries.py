@@ -1,5 +1,4 @@
 
-
 create_schemas = """
 CREATE SCHEMA IF NOT EXISTS prod;
 CREATE SCHEMA IF NOT EXISTS test;
@@ -8,7 +7,8 @@ CREATE SCHEMA IF NOT EXISTS test;
 drop_current_tables = """
 DROP TABLE IF EXISTS current_incidents;
 DROP TABLE IF EXISTS current_perimeters;
-DROP TABLE IF EXISTS current_rings;
+DROP TABLE IF EXISTS current_bounding_boxes;
+DROP TABLE IF EXISTS current_aqi;
 """
 
 create_current_tables = """
@@ -39,6 +39,14 @@ CREATE TABLE IF NOT EXISTS current_bounding_boxes (
   bbox_min_lat numeric(18,0),
   bbox_max_lon numeric(18,0),
   bbox_min_lon numeric(18,0)
+);
+
+CREATE TABLE IF NOT EXISTS current_aqi (
+   incident_id varchar(256),
+   obs_date timestamp NOT NULL,
+   obs_lat numeric(18,0),
+   obs_lon numeric(18,0),
+   obs_aqi smallint
 );
 """
 
@@ -76,6 +84,17 @@ CREATE TABLE IF NOT EXISTS staging_incidents_outdated(
 );
 """
 
+create_staging_aqi = """
+DROP TABLE IF EXISTS staging_aqi;
+CREATE TABLE IF NOT EXISTS staging_aqi (
+   incident_id varchar(256),
+   obs_date timestamp NOT NULL,
+   obs_lat numeric(18,0),
+   obs_lon numeric(18,0),
+   obs_aqi smallint
+);
+"""
+
 insert_updated_outdated = """
 INSERT INTO staging_incidents_updated (incident_id)
 SELECT si.incident_id AS incident_id
@@ -98,6 +117,11 @@ WHERE incident_id IN (SELECT incident_id FROM staging_incidents_outdated);
 DELETE FROM current_perimeters
 WHERE incident_id IN (SELECT incident_id FROM staging_incidents_outdated);
 DELETE FROM current_bounding_boxes
+WHERE incident_id IN (SELECT incident_id FROM staging_incidents_outdated);
+"""
+
+delete_aqi_outdated = """
+DELETE FROM current_aqi
 WHERE incident_id IN (SELECT incident_id FROM staging_incidents_outdated);
 """
 
@@ -149,6 +173,10 @@ SELECT incident_id, bbox_min_lon, bbox_min_lat, bbox_max_lon, bbox_max_lat,
 FROM current_bounding_boxes;
 """
 
+select_centroids = """
+SELECT incident_id, centroid_lat, centroid_lon
+FROM current_incidents;
+"""
 
 insert_staging_incident = """
 INSERT INTO staging_incidents (incident_id, incident_name,
@@ -161,5 +189,11 @@ VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s);
 
 insert_staging_perimeter = """
 INSERT INTO staging_perimeters (incident_id, ring_id, lon, lat)
+VALUES %s
+"""
+
+insert_staging_aqi = """
+INSERT INTO staging_perimeters (incident_id, obs_date, obs_lat,
+                                obs_lon, obs_aqi)
 VALUES %s
 """

@@ -11,6 +11,15 @@ airnow_bbox_url = "https://airnowapi.org/aq/data/" \
     + "&includeconcentrations=0" \
     + "&api_key={api_key}"
 
+airnow_radius_url = "https://www.airnowapi.org/aq/" \
+    + "observation/latLong/current/" \
+    + "?format=application/json" \
+    + "&latitude={lat}" \
+    + "&longitude={lon}" \
+    + "&distance=150" \
+    + "&API_KEY={key}"
+
+
 active_wildfire_incidents_url = "https://services3.arcgis.com/" \
     + "T4QMspbfLg3qTGWY/arcgis/rest/services/" \
     + "Current_WildlandFire_Perimeters/" \
