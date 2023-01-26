@@ -47,3 +47,5 @@ while tracking is turned on (being careful not to repeat messages) and
 stop when tracking is turned off. I guess I can live with that until I
 figure out how to get the messages sent to the MapShare site, which so
 far has eluded me. 
+
+testing
