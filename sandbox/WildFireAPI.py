@@ -65,6 +65,7 @@ def run(cur, url):
         perimeter_values = make_perimeter_values(incident_id, rings)
 
         # execute sql queries
+        # breaking downstream bc centroid_lat/lon are never set
         cur.execute(qry.insert_staging_incident, incident_values)
         psycopg2.extras.execute_values(cur, qry.insert_staging_perimeter,
                                        perimeter_values)
