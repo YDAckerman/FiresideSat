@@ -45,14 +45,16 @@ def run(cur, api_key):
     }
 
     cur.execute(qry.create_staging_aqi)
+    # breaking b/c no latlon info in incidents
     cur.execute(qry.select_centroids)
+
     records = cur.fetchall()
 
     for record in records:
         incident_id, params['lat'], params['lon'] = record
         pdb.set_trace()
         next
-        # api_response = json.loads(requests.get(api.airnow_radius_url,
+        # api_response = json.loads(requests.get (api.airnow_radius_url,
         #                                        params=params).text)
         # aqi_values = make_aqi_values(incident_id, api_response)
         # psycopg2.extras.execute_values(cur, qry.insert_staging_aqi,
