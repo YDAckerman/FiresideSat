@@ -43,14 +43,14 @@ start_operator = DummyOperator(task_id='Begin_Fire_Dag_Execution',
 create_staging_tables = PostgresOperator(
     task_id="create_staging_tables",
     dag=dag,
-    postgress_conn_id="airflow",
+    postgres_conn_id="postgres_default",
     sql=SqlQueries.create_staging_tables
 )
 
 load_wildfire_data = LoadWildfireDataOperator(
     task_id="load_wildfire_data",
     dag=dag,
-    postgress_conn_id="airflow",
+    postgres_conn_id="postgres_default",
     api_url=ApiCalls.wildfire_incidents_test_url,
     extractors=[DataExtractors.extract_wildfire_incident_values,
                 DataExtractors.extract_wildfire_perimeter_values],
