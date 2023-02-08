@@ -2,13 +2,16 @@ from datetime import datetime, timedelta
 from airflow import DAG
 from airflow.operators.dummy_operator import DummyOperator
 from airflow.operators.postgres_operator import PostgresOperator
-from airflow.operators.python_operator import PythonOperator
+# from airflow.operators.python_operator import PythonOperator
 
-from airflow.operators import (LoadWildfireData)
+from operators.load_wildfire_data_operator import LoadWildfireDataOperator
+from helpers.sql_queries import SqlQueries
+from helpers.data_extractors import DataExtractors
+from helpers.api_calls import ApiCalls
 
-from helpers import SqlQueries
-from helpers import DataExtractors
-from helpers import ApiCalls
+# ##############################################
+#  default arguments
+# ##############################################
 
 default_args = {
     'owner': 'Yoni Ackerman',
@@ -18,6 +21,10 @@ default_args = {
     'retry_delay': timedelta(seconds=5),
 }
 
+# ##############################################
+#  dag instantiation
+# ##############################################
+
 dag = DAG('fire_dag',
           default_args=default_args,
           description='ELT for Wildfire Conditions',
@@ -26,20 +33,39 @@ dag = DAG('fire_dag',
           catchup=True
           )
 
-start_operator = DummyOperator(task_id='Being_Fire_Dag_Execution')
+# ##############################################
+#  operator instantiations
+# ##############################################
 
-staging_tables_operator = PostgresOperator(
+start_operator = DummyOperator(task_id='Begin_Fire_Dag_Execution',
+                               dag=dag)
+
+create_staging_tables = PostgresOperator(
     task_id="create_staging_tables",
+    dag=dag,
     postgress_conn_id="airflow",
     sql=SqlQueries.create_staging_tables
 )
 
-load_data_operator = LoadWildfireData(
+load_wildfire_data = LoadWildfireDataOperator(
     task_id="load_wildfire_data",
+    dag=dag,
     postgress_conn_id="airflow",
     api_url=ApiCalls.wildfire_incidents_test_url,
     extractors=[DataExtractors.extract_wildfire_incident_values,
-                DataExtractors.extract_wildfire_perimeter_values]
+                DataExtractors.extract_wildfire_perimeter_values],
     loaders=[SqlQueries.insert_staging_incident,
              SqlQueries.insert_staging_perimeter]
 )
+
+end_operator = DummyOperator(task_id='Stop_execution', dag=dag)
+
+# ##############################################
+#  dag structure
+# ##############################################
+
+start_operator >> create_staging_tables
+
+create_staging_tables >> load_wildfire_data
+
+load_wildfire_data >> end_operator
