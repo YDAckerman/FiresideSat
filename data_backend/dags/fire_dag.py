@@ -15,10 +15,8 @@ from helpers.api_calls import ApiCalls
 
 default_args = {
     'owner': 'Yoni Ackerman',
-    'start_date': datetime(2018, 11, 1),
-    'end_date': datetime(2018, 11, 3),
     'retries': 0,
-    'retry_delay': timedelta(seconds=5),
+    'retry_delay': timedelta(minutes=3)
 }
 
 # ##############################################
@@ -26,6 +24,8 @@ default_args = {
 # ##############################################
 
 dag = DAG('fire_dag',
+          start_date=datetime(2021, 4, 1),
+          end_date=datetime(2021, 4, 2),
           default_args=default_args,
           description='ELT for Wildfire Conditions',
           schedule_interval=timedelta(hours=5),
@@ -43,14 +43,14 @@ start_operator = DummyOperator(task_id='Begin_Fire_Dag_Execution',
 create_staging_tables = PostgresOperator(
     task_id="create_staging_tables",
     dag=dag,
-    postgres_conn_id="postgres_default",
+    postgres_conn_id="fireside",
     sql=SqlQueries.create_staging_tables
 )
 
 load_wildfire_data = LoadWildfireDataOperator(
     task_id="load_wildfire_data",
     dag=dag,
-    postgres_conn_id="postgres_default",
+    postgres_conn_id="fireside",
     api_url=ApiCalls.wildfire_incidents_test_url,
     extractors=[DataExtractors.extract_wildfire_incident_values,
                 DataExtractors.extract_wildfire_perimeter_values],
