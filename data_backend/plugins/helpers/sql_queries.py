@@ -18,8 +18,8 @@ class SqlQueries:
     CREATE TABLE IF NOT EXISTS current_incidents (
     incident_id varchar(256) PRIMARY KEY,
     incident_name varchar(256),
-    centroid_lat numeric(18,0),
-    centroid_lon numeric(18,0),
+    centroid_lat numeric,
+    centroid_lon numeric,
     date_created bigint NOT NULL,
     date_current bigint NOT NULL,
     behavior varchar(256),
@@ -30,25 +30,25 @@ class SqlQueries:
     CREATE TABLE IF NOT EXISTS current_perimeters (
     incident_id varchar(256) NOT NULL,
     ring_id integer NOT NULL,
-    lon numeric(18,0),
-    lat numeric(18,0)
+    lon numeric,
+    lat numeric
     );
 
     CREATE TABLE IF NOT EXISTS current_bounding_boxes (
     incident_id varchar(256),
-    centroid_lat numeric(18,0),
-    centroid_lon numeric(18,0),
-    bbox_max_lat numeric(18,0),
-    bbox_min_lat numeric(18,0),
-    bbox_max_lon numeric(18,0),
-    bbox_min_lon numeric(18,0)
+    centroid_lat numeric,
+    centroid_lon numeric,
+    bbox_max_lat numeric,
+    bbox_min_lat numeric,
+    bbox_max_lon numeric,
+    bbox_min_lon numeric
     );
 
     CREATE TABLE IF NOT EXISTS current_aqi (
     incident_id varchar(256),
     obs_date timestamp NOT NULL,
-    obs_lat numeric(18,0),
-    obs_lon numeric(18,0),
+    obs_lat numeric,
+    obs_lon numeric,
     obs_aqi smallint
     );
     """
@@ -62,8 +62,8 @@ class SqlQueries:
     CREATE TABLE IF NOT EXISTS staging_incidents (
     incident_id varchar(256) PRIMARY KEY,
     incident_name varchar(256),
-    centroid_lat numeric(18,0),
-    centroid_lon numeric(18,0),
+    centroid_lat numeric,
+    centroid_lon numeric,
     date_created bigint NOT NULL,
     date_current bigint NOT NULL,
     behavior varchar(256),
@@ -74,8 +74,8 @@ class SqlQueries:
     CREATE TABLE IF NOT EXISTS staging_perimeters (
     incident_id varchar(256) NOT NULL,
     ring_id integer NOT NULL,
-    lon numeric(18,0),
-    lat numeric(18,0)
+    lon numeric,
+    lat numeric
     );
 
     CREATE TABLE IF NOT EXISTS staging_incidents_updated(
@@ -92,8 +92,8 @@ class SqlQueries:
     CREATE TABLE IF NOT EXISTS staging_aqi (
     incident_id varchar(256),
     obs_date timestamp NOT NULL,
-    obs_lat numeric(18,0),
-    obs_lon numeric(18,0),
+    obs_lat numeric,
+    obs_lon numeric,
     obs_aqi smallint
     );
     """
@@ -134,7 +134,8 @@ class SqlQueries:
     WHERE staging_incidents.incident_id IN
     (SELECT incident_id FROM staging_incidents_updated)
     ON CONFLICT (incident_id) DO
-    UPDATE SET date_current      = EXCLUDED.date_current,
+    UPDATE SET
+    date_current      = EXCLUDED.date_current,
     centroid_lat      = EXCLUDED.centroid_lat,
     centroid_lon      = EXCLUDED.centroid_lon,
     behavior          = EXCLUDED.behavior,
@@ -146,6 +147,7 @@ class SqlQueries:
     DELETE FROM current_perimeters
     WHERE current_perimeters.incident_id IN
     (SELECT incident_id FROM staging_incidents_updated);
+
     INSERT INTO current_perimeters
     SELECT * FROM staging_perimeters
     WHERE staging_perimeters.incident_id IN
@@ -169,6 +171,17 @@ class SqlQueries:
     )
     ) as updated_perimeters
     GROUP BY incident_id;
+    """
+
+    upsert_incident_centroids = """
+    UPDATE current_incidents AS ci SET
+           centroid_lat = cbb.centroid_lat,
+           centroid_lon = cbb.centroid_lon
+    FROM current_bounding_boxes cbb
+    WHERE cbb.incident_id = ci.incident_id
+    AND cbb.incident_id IN (
+    SELECT incident_id FROM staging_incidents_updated
+    );
     """
 
     select_bounding_boxes = """

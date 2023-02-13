@@ -28,7 +28,7 @@ dag = DAG('fire_dag',
           end_date=datetime(2021, 4, 2),
           default_args=default_args,
           description='ELT for Wildfire Conditions',
-          schedule_interval=timedelta(hours=5),
+          schedule_interval=timedelta(days=5),
           max_active_runs=1,
           catchup=True
           )
@@ -39,6 +39,13 @@ dag = DAG('fire_dag',
 
 start_operator = DummyOperator(task_id='Begin_Fire_Dag_Execution',
                                dag=dag)
+
+create_current_tables = PostgresOperator(
+    task_id="create_current_tables",
+    dag=dag,
+    postgres_conn_id="fireside",
+    sql=SqlQueries.create_current_tables
+)
 
 create_staging_tables = PostgresOperator(
     task_id="create_staging_tables",
@@ -66,6 +73,41 @@ insert_updated_outdated = PostgresOperator(
     sql=SqlQueries.insert_updated_outdated
 )
 
+delete_all_outdated = PostgresOperator(
+    task_id="delete_all_outdated",
+    dag=dag,
+    postgres_conn_id="fireside",
+    sql=SqlQueries.delete_all_outdated
+)
+
+upsert_current_incident = PostgresOperator(
+    task_id="upsert_current_incident",
+    dag=dag,
+    postgres_conn_id="fireside",
+    sql=SqlQueries.upsert_current_incident
+)
+
+upsert_current_perimeter = PostgresOperator(
+    task_id="upsert_current_perimeter",
+    dag=dag,
+    postgres_conn_id="fireside",
+    sql=SqlQueries.upsert_current_perimeter
+)
+
+upsert_current_bounding_box = PostgresOperator(
+    task_id="upsert_current_bounding_box",
+    dag=dag,
+    postgres_conn_id="fireside",
+    sql=SqlQueries.upsert_current_bounding_box
+)
+
+upsert_current_centroids = PostgresOperator(
+    task_id="upsert_current_centroids",
+    dag=dag,
+    postgres_conn_id="fireside",
+    sql=SqlQueries.upsert_incident_centroids
+)
+
 end_operator = DummyOperator(task_id='Stop_execution', dag=dag)
 
 # ##############################################
@@ -78,4 +120,14 @@ create_staging_tables >> stage_wildfire_data
 
 stage_wildfire_data >> insert_updated_outdated
 
-insert_updated_outdated >> end_operator
+insert_updated_outdated >> delete_all_outdated
+
+delete_all_outdated >> upsert_current_incident
+
+upsert_current_incident >> upsert_current_perimeter
+
+upsert_current_perimeter >> upsert_current_bounding_box
+
+upsert_current_bounding_box >> upsert_current_centroids
+
+upsert_current_centroids >> end_operator
