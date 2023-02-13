@@ -20,8 +20,8 @@ class SqlQueries:
     incident_name varchar(256),
     centroid_lat numeric(18,0),
     centroid_lon numeric(18,0),
-    date_created timestamp NOT NULL,
-    date_current timestamp NOT NULL,
+    date_created bigint NOT NULL,
+    date_current bigint NOT NULL,
     behavior varchar(256),
     total_acres integer,
     percent_contained smallint
@@ -64,8 +64,8 @@ class SqlQueries:
     incident_name varchar(256),
     centroid_lat numeric(18,0),
     centroid_lon numeric(18,0),
-    date_created timestamp NOT NULL,
-    date_current timestamp NOT NULL,
+    date_created bigint NOT NULL,
+    date_current bigint NOT NULL,
     behavior varchar(256),
     total_acres integer,
     percent_contained smallint
@@ -184,8 +184,9 @@ class SqlQueries:
 
     insert_staging_incident = """
     INSERT INTO staging_incidents (incident_id, incident_name,
-                behavior, total_acres, percent_contained, date_created,
-                date_current, centroid_lat,centroid_lon)
+                behavior, total_acres, percent_contained,
+                date_created, date_current, centroid_lat,
+                centroid_lon)
     VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s);
     """
 

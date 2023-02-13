@@ -4,7 +4,7 @@ from airflow.operators.dummy_operator import DummyOperator
 from airflow.operators.postgres_operator import PostgresOperator
 # from airflow.operators.python_operator import PythonOperator
 
-from operators.load_wildfire_data_operator import LoadWildfireDataOperator
+from operators.stage_wildfire_data_operator import StageWildfireDataOperator
 from helpers.sql_queries import SqlQueries
 from helpers.data_extractors import DataExtractors
 from helpers.api_calls import ApiCalls
@@ -47,15 +47,23 @@ create_staging_tables = PostgresOperator(
     sql=SqlQueries.create_staging_tables
 )
 
-load_wildfire_data = LoadWildfireDataOperator(
+stage_wildfire_data = StageWildfireDataOperator(
     task_id="load_wildfire_data",
     dag=dag,
     postgres_conn_id="fireside",
-    api_url=ApiCalls.wildfire_incidents_test_url,
+    http_conn_id="wildfire_api",
+    api_endpoint=ApiCalls.wildfire_incidents_test_endpoint,
     extractors=[DataExtractors.extract_wildfire_incident_values,
                 DataExtractors.extract_wildfire_perimeter_values],
     loaders=[SqlQueries.insert_staging_incident,
              SqlQueries.insert_staging_perimeter]
+)
+
+insert_updated_outdated = PostgresOperator(
+    task_id="insert_updated_outdated",
+    dag=dag,
+    postgres_conn_id="fireside",
+    sql=SqlQueries.insert_updated_outdated
 )
 
 end_operator = DummyOperator(task_id='Stop_execution', dag=dag)
@@ -66,6 +74,8 @@ end_operator = DummyOperator(task_id='Stop_execution', dag=dag)
 
 start_operator >> create_staging_tables
 
-create_staging_tables >> load_wildfire_data
+create_staging_tables >> stage_wildfire_data
 
-load_wildfire_data >> end_operator
+stage_wildfire_data >> insert_updated_outdated
+
+insert_updated_outdated >> end_operator
