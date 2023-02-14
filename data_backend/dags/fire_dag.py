@@ -66,6 +66,18 @@ stage_wildfire_data = StageWildfireDataOperator(
              SqlQueries.insert_staging_perimeter]
 )
 
+# instead of upserting centroids from current_perimeters
+# to current_incidents, upsert centroids from staging_perimeters
+# to staging_incidents, and then upsert staging_incidents
+# to current_incidents
+
+upsert_staging_centroids = PostgresOperator(
+    task_id="upsert_staging_centroids",
+    dag=dag,
+    postgres_conn_id="fireside",
+    sql=SqlQueries.upsert_staging_centroids
+)
+
 insert_updated_outdated = PostgresOperator(
     task_id="insert_updated_outdated",
     dag=dag,
@@ -94,19 +106,6 @@ upsert_current_perimeter = PostgresOperator(
     sql=SqlQueries.upsert_current_perimeter
 )
 
-upsert_current_bounding_box = PostgresOperator(
-    task_id="upsert_current_bounding_box",
-    dag=dag,
-    postgres_conn_id="fireside",
-    sql=SqlQueries.upsert_current_bounding_box
-)
-
-upsert_current_centroids = PostgresOperator(
-    task_id="upsert_current_centroids",
-    dag=dag,
-    postgres_conn_id="fireside",
-    sql=SqlQueries.upsert_incident_centroids
-)
 
 end_operator = DummyOperator(task_id='Stop_execution', dag=dag)
 

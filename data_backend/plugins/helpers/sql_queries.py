@@ -10,7 +10,6 @@ class SqlQueries:
     drop_current_tables = """
     DROP TABLE IF EXISTS current_incidents;
     DROP TABLE IF EXISTS current_perimeters;
-    DROP TABLE IF EXISTS current_bounding_boxes;
     DROP TABLE IF EXISTS current_aqi;
     """
 
@@ -18,8 +17,7 @@ class SqlQueries:
     CREATE TABLE IF NOT EXISTS current_incidents (
     incident_id varchar(256) PRIMARY KEY,
     incident_name varchar(256),
-    centroid_lat numeric,
-    centroid_lon numeric,
+    centroid geometry(Point, 4326),
     date_created bigint NOT NULL,
     date_current bigint NOT NULL,
     behavior varchar(256),
@@ -30,23 +28,13 @@ class SqlQueries:
     CREATE TABLE IF NOT EXISTS current_perimeters (
     incident_id varchar(256) NOT NULL,
     ring_id integer NOT NULL,
-    lon numeric,
-    lat numeric
-    );
-
-    CREATE TABLE IF NOT EXISTS current_bounding_boxes (
-    incident_id varchar(256),
-    centroid_lat numeric,
-    centroid_lon numeric,
-    bbox_max_lat numeric,
-    bbox_min_lat numeric,
-    bbox_max_lon numeric,
-    bbox_min_lon numeric
+    geom geometry(Point, 4326)
     );
 
     CREATE TABLE IF NOT EXISTS current_aqi (
     incident_id varchar(256),
     obs_date timestamp NOT NULL,
+    obs_geom  geometry(Point, 4326),
     obs_lat numeric,
     obs_lon numeric,
     obs_aqi smallint
@@ -62,8 +50,7 @@ class SqlQueries:
     CREATE TABLE IF NOT EXISTS staging_incidents (
     incident_id varchar(256) PRIMARY KEY,
     incident_name varchar(256),
-    centroid_lat numeric,
-    centroid_lon numeric,
+    centroid geometry(Point, 4326),
     date_created bigint NOT NULL,
     date_current bigint NOT NULL,
     behavior varchar(256),
@@ -74,8 +61,13 @@ class SqlQueries:
     CREATE TABLE IF NOT EXISTS staging_perimeters (
     incident_id varchar(256) NOT NULL,
     ring_id integer NOT NULL,
-    lon numeric,
-    lat numeric
+    raw_lon numeric NOT NULL,
+    raw_lat numeric NOT NULL,
+    geom geometry(Point, 4326) GENERATED ALWAYS AS (
+        ST_SetSRID(
+                   ST_MakePoint(raw_lon, raw_lat),
+                   4326
+        )) STORED
     );
 
     CREATE TABLE IF NOT EXISTS staging_incidents_updated(
@@ -87,13 +79,13 @@ class SqlQueries:
     );
     """
 
+    # TODO: create aqi_dag
     create_staging_aqi = """
     DROP TABLE IF EXISTS staging_aqi;
     CREATE TABLE IF NOT EXISTS staging_aqi (
     incident_id varchar(256),
     obs_date timestamp NOT NULL,
-    obs_lat numeric,
-    obs_lon numeric,
+    obs_geom geometry(Point, 4326),
     obs_aqi smallint
     );
     """
@@ -114,15 +106,15 @@ class SqlQueries:
     );
     """
 
+    # TODO: create aqi_dag
     delete_all_outdated = """
     DELETE FROM current_incidents
     WHERE incident_id IN (SELECT incident_id FROM staging_incidents_outdated);
     DELETE FROM current_perimeters
     WHERE incident_id IN (SELECT incident_id FROM staging_incidents_outdated);
-    DELETE FROM current_bounding_boxes
-    WHERE incident_id IN (SELECT incident_id FROM staging_incidents_outdated);
     """
 
+    # TODO: create aqi_dag
     delete_aqi_outdated = """
     DELETE FROM current_aqi
     WHERE incident_id IN (SELECT incident_id FROM staging_incidents_outdated);
@@ -136,8 +128,7 @@ class SqlQueries:
     ON CONFLICT (incident_id) DO
     UPDATE SET
     date_current      = EXCLUDED.date_current,
-    centroid_lat      = EXCLUDED.centroid_lat,
-    centroid_lon      = EXCLUDED.centroid_lon,
+    centroid          = EXCLUDED.centroid,
     behavior          = EXCLUDED.behavior,
     total_acres       = EXCLUDED.total_acres,
     percent_contained = EXCLUDED.percent_contained;
@@ -149,39 +140,20 @@ class SqlQueries:
     (SELECT incident_id FROM staging_incidents_updated);
 
     INSERT INTO current_perimeters
-    SELECT * FROM staging_perimeters
+    SELECT incident_id, ring_id, geom FROM staging_perimeters
     WHERE staging_perimeters.incident_id IN
     (SELECT incident_id FROM staging_incidents_updated);
     """
 
-    upsert_current_bounding_box = """
-    DELETE FROM current_bounding_boxes
-    WHERE current_bounding_boxes.incident_id IN
-    (SELECT incident_id FROM staging_incidents_updated);
-
-    INSERT INTO current_bounding_boxes (incident_id,
-    centroid_lon, centroid_lat,
-    bbox_max_lat, bbox_min_lat,
-    bbox_max_lon, bbox_min_lon)
-    SELECT incident_id, AVG(lon), AVG(lat),
-    MAX(lat), MIN(lat), MAX(lon), MIN(lon)
+    upsert_staging_centroids = """
+    UPDATE staging_incidents as si SET
+                   centroid = pc.centroid
     FROM (
-    SELECT * FROM current_perimeters WHERE incident_id IN (
-    SELECT incident_id FROM staging_incidents_updated
-    )
-    ) as updated_perimeters
-    GROUP BY incident_id;
-    """
-
-    upsert_incident_centroids = """
-    UPDATE current_incidents AS ci SET
-           centroid_lat = cbb.centroid_lat,
-           centroid_lon = cbb.centroid_lon
-    FROM current_bounding_boxes cbb
-    WHERE cbb.incident_id = ci.incident_id
-    AND cbb.incident_id IN (
-    SELECT incident_id FROM staging_incidents_updated
-    );
+      SELECT incident_id, ST_GeometricMedian(geom) AS centroid,
+      FROM staging_perimeters
+      GROUP BY incident_id
+    ) as pc
+    WHERE pc.incident_id = si.incident_id;
     """
 
     select_bounding_boxes = """
@@ -204,7 +176,8 @@ class SqlQueries:
     """
 
     insert_staging_perimeter = """
-    INSERT INTO staging_perimeters (incident_id, ring_id, lon, lat)
+    INSERT INTO staging_perimeters (incident_id, ring_id,
+                                    raw_lon, raw_lat)
     VALUES %s
     """
 
