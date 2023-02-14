@@ -146,14 +146,18 @@ class SqlQueries:
     """
 
     upsert_staging_centroids = """
-    UPDATE staging_incidents as si SET
+    UPDATE staging_incidents SET
                    centroid = pc.centroid
     FROM (
-      SELECT incident_id, ST_GeometricMedian(geom) AS centroid,
-      FROM staging_perimeters
-      GROUP BY incident_id
-    ) as pc
-    WHERE pc.incident_id = si.incident_id;
+      SELECT incident_id, ST_GeometricMedian(geom) AS centroid
+      FROM (SELECT incident_id,
+                   ST_Multi(ST_Union(geom))::geometry(MultiPoint, 4326)
+                   AS geom
+            FROM staging_perimeters
+            GROUP BY incident_id
+            ) pc1
+    ) pc
+    WHERE pc.incident_id = staging_incidents.incident_id;
     """
 
     select_bounding_boxes = """
@@ -163,16 +167,17 @@ class SqlQueries:
     """
 
     select_centroids = """
-    SELECT incident_id, centroid_lat, centroid_lon
+    SELECT incident_id, centroid
     FROM current_incidents;
     """
 
     insert_staging_incident = """
-    INSERT INTO staging_incidents (incident_id, incident_name,
-                behavior, total_acres, percent_contained,
-                date_created, date_current, centroid_lat,
-                centroid_lon)
-    VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s);
+    INSERT INTO staging_incidents (
+                incident_id, incident_name,
+                behavior, total_acres,
+                percent_contained, date_created,
+                date_current, centroid)
+    VALUES (%s,%s,%s,%s,%s,%s,%s,%s);
     """
 
     insert_staging_perimeter = """

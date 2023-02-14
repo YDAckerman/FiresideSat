@@ -16,7 +16,7 @@ class DataExtractors():
 
         # None holds the lat/lon centroid values that
         # will come as part of the transform step
-        return ([attributes[x] for x in attribute_keys] + [None]*2)
+        return ([attributes[x] for x in attribute_keys] + [None])
 
     def extract_wildfire_perimeter_values(incident_id, rings):
         """

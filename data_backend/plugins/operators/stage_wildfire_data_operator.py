@@ -58,7 +58,8 @@ class StageWildfireDataOperator(BaseOperator):
                 rings = feature['geometry']['rings']
 
                 incident_values = self.extractors[0](attributes)
-                perimeter_values = self.extractors[1](incident_id, rings)
+                perimeter_values = self.extractors[1](incident_id,
+                                                      rings)
 
                 self.log.info("Inserting staging data for incident: " +
                               incident_id)

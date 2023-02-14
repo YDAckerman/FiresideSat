@@ -40,13 +40,6 @@ dag = DAG('fire_dag',
 start_operator = DummyOperator(task_id='Begin_Fire_Dag_Execution',
                                dag=dag)
 
-create_current_tables = PostgresOperator(
-    task_id="create_current_tables",
-    dag=dag,
-    postgres_conn_id="fireside",
-    sql=SqlQueries.create_current_tables
-)
-
 create_staging_tables = PostgresOperator(
     task_id="create_staging_tables",
     dag=dag,
@@ -65,11 +58,6 @@ stage_wildfire_data = StageWildfireDataOperator(
     loaders=[SqlQueries.insert_staging_incident,
              SqlQueries.insert_staging_perimeter]
 )
-
-# instead of upserting centroids from current_perimeters
-# to current_incidents, upsert centroids from staging_perimeters
-# to staging_incidents, and then upsert staging_incidents
-# to current_incidents
 
 upsert_staging_centroids = PostgresOperator(
     task_id="upsert_staging_centroids",
@@ -106,7 +94,6 @@ upsert_current_perimeter = PostgresOperator(
     sql=SqlQueries.upsert_current_perimeter
 )
 
-
 end_operator = DummyOperator(task_id='Stop_execution', dag=dag)
 
 # ##############################################
@@ -117,7 +104,9 @@ start_operator >> create_staging_tables
 
 create_staging_tables >> stage_wildfire_data
 
-stage_wildfire_data >> insert_updated_outdated
+stage_wildfire_data >> upsert_staging_centroids
+
+upsert_staging_centroids >> insert_updated_outdated
 
 insert_updated_outdated >> delete_all_outdated
 
@@ -125,8 +114,4 @@ delete_all_outdated >> upsert_current_incident
 
 upsert_current_incident >> upsert_current_perimeter
 
-upsert_current_perimeter >> upsert_current_bounding_box
-
-upsert_current_bounding_box >> upsert_current_centroids
-
-upsert_current_centroids >> end_operator
+upsert_current_perimeter >> end_operator
