@@ -2,27 +2,17 @@
 
 ## About
 
-FiresideSat is a tool combining Twilio, AWS Lambda, and a few
-fire-tracking API's to allow backpackers (or anyone with a sat-phone)
-to get real-time, location-specific, wildfire and smoke information. 
+FiresideSat is a tool to connect my (your?) garmin in-reach mini to various wildfire-related data.
 
-The project is a work in progress. This repository only tracks the
-python code I've been developing. To function, additional work needs
-to be done setting up a Twilio messaging system with an AWS Lambda
-function. This can easily be done following a few simple tutorials,
-but I'll track my own path either here or on some blogging platform
-when I get the chance.
-
-## Goals
+## Current Goals
 
 As I was recently reminded, fire perimeters are only part of the
-problem when one is off-grid. Smoke and air-quality tracking and
-prediction are also essential. I am currently
-incorporating already extant API's for this purpose. However
-doing so will likely require a different architecture than what I have
-currently set up. 
+problem when one is off-grid. Smoke and air-quality tracking (and
+prediction) are also essential.  
 
 ## Updates
+
+02-20-2021 - a prototype for the 'data backend' is working. Lots of different tests to run. Certainly not robust. Expected downtime this week for one of the apis - might be nice to see how the thing breaks. Next: connecting to garmin device (also via airflow?). Then user back-end and front-end. 
 
 08-04-2022 - The current design of the project won't work because, as
 far as I can tell, both twilio and the sat phone will only have
