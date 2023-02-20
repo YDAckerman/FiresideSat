@@ -72,7 +72,7 @@ delete_outdated_operator = PostgresOperator(
     task_id="delete_outdated",
     dag=dag,
     postgres_conn_id="fireside",
-    sql=SqlQueries.delete_aqi_outdated_updated
+    sql=SqlQueries.delete_aqi_outdated
 )
 
 end_operator = DummyOperator(task_id='Stop_execution', dag=dag)
