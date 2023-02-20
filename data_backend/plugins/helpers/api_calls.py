@@ -14,9 +14,8 @@ class ApiCalls():
         + "&includeconcentrations=0" \
         + "&api_key={api_key}"
 
-    airnow_radius_url = "https://www.airnowapi.org/aq/" \
-        + "observation/latLong/current/" \
-        + "?format=application/json" \
+    # https://www.airnowapi.org/aq/observation/latLong/current/
+    airnow_radius_url = "?format=application/json" \
         + "&latitude={lat}" \
         + "&longitude={lon}" \
         + "&distance=150" \

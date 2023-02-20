@@ -61,8 +61,8 @@ class StageWildfireDataOperator(BaseOperator):
                 perimeter_values = self.extractors[1](incident_id,
                                                       rings)
 
-                self.log.info("Inserting staging data for incident: " +
-                              incident_id)
+                self.log.info("Inserting wildfire staging data for incident: "
+                              + incident_id)
                 pg_cur.execute(self.loaders[0], incident_values)
                 psycopg2.extras.execute_values(pg_cur,
                                                self.loaders[1],

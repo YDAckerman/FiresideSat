@@ -33,11 +33,15 @@ class SqlQueries:
 
     CREATE TABLE IF NOT EXISTS current_aqi (
     incident_id varchar(256),
-    obs_date timestamp NOT NULL,
-    obs_geom  geometry(Point, 4326),
-    obs_lat numeric,
-    obs_lon numeric,
-    obs_aqi smallint
+    date timestamp NOT NULL,
+    hour smallint NOT NULL,
+    geom geometry(Point, 4326) GENERATED ALWAYS AS (
+        ST_SetSRID(
+                   ST_MakePoint(obs_lon, obs_lat),
+                   4326
+        )) STORED
+    ),
+    aqi smallint
     );
     """
 
@@ -84,9 +88,17 @@ class SqlQueries:
     DROP TABLE IF EXISTS staging_aqi;
     CREATE TABLE IF NOT EXISTS staging_aqi (
     incident_id varchar(256),
-    obs_date timestamp NOT NULL,
-    obs_geom geometry(Point, 4326),
-    obs_aqi smallint
+    date timestamp NOT NULL,
+    hour smallint NOT NULL,
+    geom geometry(Point, 4326) GENERATED ALWAYS AS (
+        ST_SetSRID(
+                   ST_MakePoint(raw_lon, raw_lat),
+                   4326
+        )) STORED
+    ),
+    raw_lat numeric,
+    raw_lon numeric,
+    aqi     smallint
     );
     """
 
@@ -106,7 +118,6 @@ class SqlQueries:
     );
     """
 
-    # TODO: create aqi_dag
     delete_all_outdated = """
     DELETE FROM current_incidents
     WHERE incident_id IN (SELECT incident_id FROM staging_incidents_outdated);
@@ -132,6 +143,20 @@ class SqlQueries:
     behavior          = EXCLUDED.behavior,
     total_acres       = EXCLUDED.total_acres,
     percent_contained = EXCLUDED.percent_contained;
+    """
+
+    # TODO: create aqi_dag
+    upsert_current_aqi = """
+    INSERT INTO current_aqi
+    SELECT * FROM staging_aqi
+    WHERE stating_aqi.incident_id IN
+    (SELEcT incident_id FROM staging_incidents_updated)
+    ON CONFLICT (incident_id) DO
+    UPDATE SET
+    date = EXCLUDED.date,
+    hour = EXCLUDED.hour,
+    geom = EXCLUDED.geom,
+    aqi  = EXCLUDED.aqi;
     """
 
     upsert_current_perimeter = """
@@ -166,8 +191,11 @@ class SqlQueries:
     FROM current_bounding_boxes;
     """
 
+    # TODO: create aqi_dag
     select_centroids = """
-    SELECT incident_id, centroid
+    SELECT incident_id,
+           ST_X(centroid) as lon,
+           ST_Y(centroid) as lat
     FROM current_incidents;
     """
 
@@ -186,8 +214,9 @@ class SqlQueries:
     VALUES %s
     """
 
+    # TODO: create aqi_dag
     insert_staging_aqi = """
-    INSERT INTO staging_perimeters (incident_id, obs_date, obs_lat,
-    obs_lon, obs_aqi)
+    INSERT INTO staging_perimeters (incident_id, date, hour,
+                                    raw_lat, raw_lon, aqi)
     VALUES %s
     """
