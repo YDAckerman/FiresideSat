@@ -61,14 +61,19 @@ stage_aqi_data_operator = StageAqiDataOperator(
     loaders=[SqlQueries.insert_staging_aqi]
 )
 
+upsert_current_operator = PostgresOperator(
+    task_id="upsert_current",
+    dag=dag,
+    postgres_conn_id="fireside",
+    sql=SqlQueries.upsert_current_aqi
+)
+
 delete_outdated_operator = PostgresOperator(
     task_id="delete_outdated",
     dag=dag,
     postgres_conn_id="fireside",
-    sql=SqlQueries.delete_aqi_outdated
+    sql=SqlQueries.delete_aqi_outdated_updated
 )
-
-upsert_current_aqi
 
 end_operator = DummyOperator(task_id='Stop_execution', dag=dag)
 
@@ -80,4 +85,8 @@ start_operator >> create_staging_aqi
 
 create_staging_aqi >> stage_aqi_data_operator
 
-stage_aqi_data_operator >> end_operator
+stage_aqi_data_operator >> upsert_current_operator
+
+upsert_current_operator >> delete_outdated_operator
+
+delete_outdated_operator >> end_operator

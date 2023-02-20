@@ -35,12 +35,7 @@ class SqlQueries:
     incident_id varchar(256),
     date timestamp NOT NULL,
     hour smallint NOT NULL,
-    geom geometry(Point, 4326) GENERATED ALWAYS AS (
-        ST_SetSRID(
-                   ST_MakePoint(obs_lon, obs_lat),
-                   4326
-        )) STORED
-    ),
+    geom geometry(Point, 4326),
     aqi smallint
     );
     """
@@ -87,17 +82,17 @@ class SqlQueries:
     create_staging_aqi = """
     DROP TABLE IF EXISTS staging_aqi;
     CREATE TABLE IF NOT EXISTS staging_aqi (
-    incident_id varchar(256),
-    date timestamp NOT NULL,
-    hour smallint NOT NULL,
-    raw_lat numeric NOT NULL,
-    raw_lon numeric NOT NULL,
-    aqi     smallint NOT NULL,
-    geom geometry(Point, 4326) GENERATED ALWAYS AS (
-        ST_SetSRID(
-                   ST_MakePoint(raw_lon, raw_lat),
-                   4326
-        )) STORED
+           incident_id    varchar(256),
+           date           timestamp   NOT NULL,
+           hour           smallint    NOT NULL,
+           raw_lat        numeric     NOT NULL,
+           raw_lon        numeric     NOT NULL,
+           aqi            smallint    NOT NULL,
+           geom   geometry(Point, 4326) GENERATED ALWAYS AS (
+               ST_SetSRID(
+                          ST_MakePoint(raw_lon, raw_lat),
+                          4326
+               )) STORED
     );
     """
 
@@ -124,10 +119,20 @@ class SqlQueries:
     WHERE incident_id IN (SELECT incident_id FROM staging_incidents_outdated);
     """
 
-    # TODO: create aqi_dag
+    # We want to remove aqi values from incidents that are no longer
+    # active. Also, remove all but the most recent aqi values
+    # for each incident
     delete_aqi_outdated = """
     DELETE FROM current_aqi
     WHERE incident_id IN (SELECT incident_id FROM staging_incidents_outdated);
+    DELETE FROM current_aqi ca1
+    WHERE EXISTS (
+          SELECT *
+          FROM current_aqi ca2
+          WHERE ca2.incident_id = ca1.incident_id
+          AND ca2.date >= ca1.date
+          AND ca2.hour > ca1.hour
+    );
     """
 
     upsert_current_incident = """
@@ -144,18 +149,10 @@ class SqlQueries:
     percent_contained = EXCLUDED.percent_contained;
     """
 
-    # TODO: create aqi_dag
+    # These values are based on geom from current_incidents
     upsert_current_aqi = """
     INSERT INTO current_aqi
-    SELECT * FROM staging_aqi
-    WHERE stating_aqi.incident_id IN
-    (SELEcT incident_id FROM staging_incidents_updated)
-    ON CONFLICT (incident_id) DO
-    UPDATE SET
-    date = EXCLUDED.date,
-    hour = EXCLUDED.hour,
-    geom = EXCLUDED.geom,
-    aqi  = EXCLUDED.aqi;
+    SELECT incident_id, date, hour, geom, aqi FROM staging_aqi;
     """
 
     upsert_current_perimeter = """
