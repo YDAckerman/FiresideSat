@@ -12,7 +12,7 @@ prediction) are also essential.
 
 ## Updates
 
-02-20-2021 - a prototype for the 'data backend' is working. Lots of different tests to run. Certainly not robust. Expected downtime this week for one of the apis - might be nice to see how the thing breaks. Next: connecting to garmin device (also via airflow?). Then user back-end and front-end. 
+02-20-2023 - a prototype for the 'data backend' is working. Lots of different tests to run. Certainly not robust. Expected downtime this week for one of the apis - might be nice to see how the thing breaks. Next: connecting to garmin device (also via airflow?). Then user back-end and front-end. 
 
 08-04-2022 - The current design of the project won't work because, as
 far as I can tell, both twilio and the sat phone will only have
