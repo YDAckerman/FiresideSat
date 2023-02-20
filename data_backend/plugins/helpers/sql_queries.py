@@ -215,7 +215,7 @@ class SqlQueries:
 
     # TODO: create aqi_dag
     insert_staging_aqi = """
-    INSERT INTO staging_perimeters (incident_id, date, hour,
-                                    raw_lat, raw_lon, aqi)
+    INSERT INTO staging_aqi (incident_id, date, hour,
+                             raw_lat, raw_lon, aqi)
     VALUES %s
     """

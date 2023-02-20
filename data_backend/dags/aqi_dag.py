@@ -55,10 +55,20 @@ stage_aqi_data_operator = StageAqiDataOperator(
     postgres_conn_id="fireside",
     http_conn_id="airnow",
     api_endpoint=ApiCalls.airnow_radius_url,
+    api_key=Variable.get("airnow_api_key"),
     internal_data_query=SqlQueries.select_centroids,
     extractors=[DataExtractors.extract_aqi_values],
     loaders=[SqlQueries.insert_staging_aqi]
 )
+
+delete_outdated_operator = PostgresOperator(
+    task_id="delete_outdated",
+    dag=dag,
+    postgres_conn_id="fireside",
+    sql=SqlQueries.delete_aqi_outdated
+)
+
+upsert_current_aqi
 
 end_operator = DummyOperator(task_id='Stop_execution', dag=dag)
 
@@ -68,4 +78,6 @@ end_operator = DummyOperator(task_id='Stop_execution', dag=dag)
 
 start_operator >> create_staging_aqi
 
-create_staging_aqi >> end_operator
+create_staging_aqi >> stage_aqi_data_operator
+
+stage_aqi_data_operator >> end_operator
