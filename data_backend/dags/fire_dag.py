@@ -48,7 +48,7 @@ create_staging_tables = PostgresOperator(
 )
 
 stage_wildfire_data = StageWildfireDataOperator(
-    task_id="load_wildfire_data",
+    task_id="stage_wildfire_data",
     dag=dag,
     postgres_conn_id="fireside",
     http_conn_id="wildfire_api",

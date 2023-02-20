@@ -90,15 +90,14 @@ class SqlQueries:
     incident_id varchar(256),
     date timestamp NOT NULL,
     hour smallint NOT NULL,
+    raw_lat numeric NOT NULL,
+    raw_lon numeric NOT NULL,
+    aqi     smallint NOT NULL,
     geom geometry(Point, 4326) GENERATED ALWAYS AS (
         ST_SetSRID(
                    ST_MakePoint(raw_lon, raw_lat),
                    4326
         )) STORED
-    ),
-    raw_lat numeric,
-    raw_lon numeric,
-    aqi     smallint
     );
     """
 
