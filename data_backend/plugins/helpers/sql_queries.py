@@ -2,6 +2,8 @@
 
 class SqlQueries:
 
+    # probably should have a safer separation of
+    # test and prod? For now I won't be using them.
     create_schemas = """
     CREATE SCHEMA IF NOT EXISTS prod;
     CREATE SCHEMA IF NOT EXISTS test;
@@ -11,6 +13,53 @@ class SqlQueries:
     DROP TABLE IF EXISTS current_incidents;
     DROP TABLE IF EXISTS current_perimeters;
     DROP TABLE IF EXISTS current_aqi;
+    """
+
+    drop_user_table = """
+    DROP TABLE IF EXISTS users;
+    """
+
+    drop_trip_tables = """
+    DROP TABLE IF EXISTS trips;
+    DROP TABLE IF EXISTS trip_points;
+    DROP TABLE IF EXISTS staging_trip_points;
+    """
+
+    create_user_table = """
+    CREATE TABLE IF NOT EXISTS users (
+    user_id            serial         PRIMARY KEY,
+    user_email         varchar(256)   NOT NULL,
+    user_otp           varchar(256)   NOT NULL,
+    has_active_trip    boolean        NOT NULL
+    );
+    """
+
+    create_trip_tables = """
+    CREATE TABLE IF NOT EXISTS trips (
+    trip_id            serial         PRIMARY KEY,
+    trip_pw            varchar(256),
+    user_id            integer,
+    start_date         timestamp,
+    last_location      geometry(Point, 4326),
+    last_update        timestamp,
+    trip_complete      boolean
+    );
+
+    CREATE TABLE IF NOT EXISTS trip_points (
+    point_id           serial                   PRIMARY KEY,
+    trip_id            integer                  NOT NULL,
+    last_location      geometry(Point, 4326)    NOT NULL,
+    last_update        timestamp                NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS staging_trip_points (
+    trip_id            serial         PRIMARY KEY,
+    raw_lon            numeric        NOT NULL,
+    raw_lat            numeric        NOT NULL,
+    last_location geometry(Point, 4326) GENERATED ALWAYS AS (
+         ST_SetSRID(ST_MakePoint(raw_lon, raw_lat), 4326)) STORED,
+    last_update        timestamp      NOT NULL
+    );
     """
 
     create_current_tables = """

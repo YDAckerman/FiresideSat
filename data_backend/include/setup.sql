@@ -40,3 +40,18 @@ CREATE TABLE IF NOT EXISTS current_aqi (
     obs_aqi            smallint
 );
 
+CREATE TABLE IF NOT EXISTS users (
+    user_id            serial         PRIMARY KEY,
+    user_email         varchar(256),
+    user_otp           varchar(256),
+    has_active_trip    boolean
+)
+
+CREATE TABLE IF NOT EXISTS trips (
+    trip_id            serial         PRIMARY KEY,
+    trip_pw            varchar(256),
+    user_id            integer,
+    active             boolean,
+    last_location      geometry(Point, 4326),
+    last_update        timestamp
+)

@@ -15,9 +15,24 @@ def get_user_info(user, pw):
     #     "?d1=2022-08-01T06:00z&d2=2022-10-01T15:00z"
     response = requests.get(url, auth=(user, pw))
 
+    # won't always work.
+    # see use of pykml below.
     coords = re.findall(r'<coordinates>(\S+),(\S+),(\S+)</coordinates>',
-                        response.text)[0]
+                        response.text)[-1]
 
+    # timestamp = re.findall(r'<TimeStamp>\s+<when>(\S+)</when>\s+</TimeStamp>',
+    #                        response.text)[-1]
+
+    # from pykml import parser
+    # from pykml import util
+    # root = parser.fromstring(bytes(response.text, encoding='utf8'))
+    # root.Document.Folder.Placemark.TimeStamp.when
+    # root.Document.Folder.Placemark.Point.coordinates
+
+    # resp = requests.get("https://developers.google.com/static/kml/documentation/KML_Samples.kml")
+    # root = parser.fromstring(bytes(resp.text, encoding='utf8'))
+    # root.Document.Folder[0].Placemark[1].Point.coordinates
+    
     event = 'OTHER'
     if 'Tracking turned off' in response.text:
         event = 'OFF'
@@ -35,10 +50,12 @@ def send_user_message(user, pw, device, msg):
     #
     # - posts message to user MapShare
     # - returns True if sucessful, False otherwise.
+    # - Note: this might be broken. access to the SendMessageToDevices
+    # -       function might require the user name(?)
     #
     url = f"https://share.garmin.com/{user}/Map/SendMessageToDevices"
     myobj = {'deviceIds': device,
-             'fromAddr': 'assistant@firesidesat.com',
+             'fromAddr': 'FiresideSat',
              'messageText': msg}
     response = requests.post(url, auth=('', pw), json=myobj)
     return(json.loads(response.text)["success"])
@@ -47,7 +64,8 @@ def send_user_message(user, pw, device, msg):
 def main():
 
     config = configparser.ConfigParser()
-    config.read_file(open('/Users/Yoni/Documents/FiresideSat/project/inReach.cfg'))
+    config.read_file(open('/usr/Yoni/Projects/'
+                          + 'FiresideSat/project/inReach.cfg'))
 
     device = int(config.get('GARMIN', 'DEVICE_ID'))
     user = config.get('GARMIN', 'USER_CODE')

@@ -50,14 +50,58 @@ create_current_tables = PostgresOperator(
     sql=SqlQueries.create_current_tables
 )
 
+drop_user_table = PostgresOperator(
+    task_id="drop_user_table",
+    dag=dag,
+    postgres_conn_id="fireside",
+    sql=SqlQueries.drop_user_table
+)
+
+create_user_table = PostgresOperator(
+    task_id="create_user_table",
+    dag=dag,
+    postgres_conn_id="fireside",
+    sql=SqlQueries.create_user_table
+)
+
+drop_trip_tables = PostgresOperator(
+    task_id="drop_trip_table",
+    dag=dag,
+    postgres_conn_id="fireside",
+    sql=SqlQueries.drop_trip_tables
+)
+
+create_trip_tables = PostgresOperator(
+    task_id="create_trip_table",
+    dag=dag,
+    postgres_conn_id="fireside",
+    sql=SqlQueries.create_trip_tables
+)
+
 end_operator = DummyOperator(task_id='Stop_execution', dag=dag)
 
 # ##############################################
 #  dag structure
 # ##############################################
 
+# clearly could use some abstraction here
+
 start_operator >> drop_current_tables
 
 drop_current_tables >> create_current_tables
 
 create_current_tables >> end_operator
+
+
+start_operator >> drop_user_table
+
+drop_user_table >> create_user_table
+
+create_user_table >> end_operator
+
+
+start_operator >> drop_trip_tables
+
+drop_trip_tables >> create_trip_tables
+
+create_trip_tables >> end_operator
