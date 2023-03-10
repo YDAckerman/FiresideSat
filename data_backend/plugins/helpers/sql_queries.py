@@ -236,7 +236,6 @@ class SqlQueries:
     FROM current_bounding_boxes;
     """
 
-    # TODO: create aqi_dag
     select_centroids = """
     SELECT incident_id,
            ST_X(centroid) as lon,
@@ -259,7 +258,6 @@ class SqlQueries:
     VALUES %s
     """
 
-    # TODO: create aqi_dag
     insert_staging_aqi = """
     INSERT INTO staging_aqi (incident_id, date, hour,
                              raw_lat, raw_lon, aqi)
