@@ -25,11 +25,11 @@ default_args = {
 # ##############################################
 
 dag = DAG('fire_dag',
-          start_date=datetime(2021, 4, 30),
-          end_date=datetime(2021, 5, 3),
+          start_date=datetime(2021, 5, 2),
+          end_date=datetime(2021, 5, 2),
           default_args=default_args,
           description='ELT for Wildfire Conditions',
-          schedule_interval=timedelta(hours=12),
+          schedule_interval=timedelta(days=1),
           max_active_runs=1,
           catchup=True
           )

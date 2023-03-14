@@ -5,11 +5,11 @@ class DataExtractors():
         """
         """
         attribute_keys = [
-            'poly_GlobalID',
+            'poly_SourceGlobalID',
             'poly_IncidentName',
-            'irwin_FireBehaviorGeneral',
-            'irwin_CalculatedAcres',
-            'irwin_PercentContained',
+            'attr_FireBehaviorGeneral',
+            'attr_CalculatedAcres',
+            'attr_PercentContained',
             'poly_DateCurrent',
             'poly_CreateDate'
         ]

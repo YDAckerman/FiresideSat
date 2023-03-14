@@ -40,7 +40,6 @@ class StageWildfireDataOperator(BaseOperator):
             .to_date_string()
 
         endpoint = self.api_endpoint.format(start_date, end_date)
-        print(endpoint)
         api_response = http_hook.run(endpoint=endpoint)
         response = json.loads(api_response.text)
 
@@ -55,7 +54,7 @@ class StageWildfireDataOperator(BaseOperator):
             for feature in response['features']:
 
                 attributes = feature['attributes']
-                incident_id = attributes['poly_GlobalID']
+                incident_id = attributes['poly_SourceGlobalID']
                 rings = feature['geometry']['rings']
 
                 incident_values = self.extractors[0](attributes)
