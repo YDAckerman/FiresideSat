@@ -40,6 +40,7 @@ class StageWildfireDataOperator(BaseOperator):
             .to_date_string()
 
         endpoint = self.api_endpoint.format(start_date, end_date)
+        print(endpoint)
         api_response = http_hook.run(endpoint=endpoint)
         response = json.loads(api_response.text)
 

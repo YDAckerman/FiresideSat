@@ -30,7 +30,7 @@ class ApiCalls():
     wildfire_incidents_test_url = "https://services3.arcgis.com/" \
         + "T4QMspbfLg3qTGWY/arcgis" \
         + "/rest/services/" \
-        + "Fire_History_Perimeters_Public/" \
+        + "WFIGS_Interagency_Perimeters/" \
         + "FeatureServer" \
         + "/0/query?f=json&where=" \
         + "(poly_CreateDate%20%3E%3D%" \
@@ -42,7 +42,7 @@ class ApiCalls():
         + "%20(irwin_POOState" \
         + "%20IN%20('US-CA'))&ouFields=*"
 
-    wildfire_incidents_test_endpoint = "Fire_History_Perimeters_Public/" \
+    wildfire_incidents_test_endpoint = "WFIGS_Interagency_Perimeters/" \
         + "FeatureServer" \
         + "/0/query?f=json&where=" \
         + "(poly_CreateDate%20%3E%3D%" \
@@ -51,5 +51,5 @@ class ApiCalls():
         + "%20poly_CreateDate%20%3C%3D%" \
         + "20DATE%20'{}')%20" \
         + "AND" \
-        + "%20(irwin_POOState" \
+        + "%20(attr_POOState" \
         + "%20IN%20('US-CA'))&outFields=*"
