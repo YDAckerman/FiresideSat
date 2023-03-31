@@ -5,7 +5,7 @@ class SqlQueries:
     # probably should have a safer separation of
     # test and prod? For now I won't be using them.
     create_schemas = """
-    CREATE SCHEMA IF NOT EXISTS prod;
+    CREATE SCHEMA IF NOT EXISTS dev;
     CREATE SCHEMA IF NOT EXISTS test;
     """
 
@@ -19,6 +19,10 @@ class SqlQueries:
     DROP TABLE IF EXISTS users;
     """
 
+    drop_device_table = """
+    DROP TABLE IF EXISTS devices;
+    """
+
     drop_trip_tables = """
     DROP TABLE IF EXISTS trips;
     DROP TABLE IF EXISTS trip_points;
@@ -30,7 +34,15 @@ class SqlQueries:
     user_id            serial         PRIMARY KEY,
     user_email         varchar(256)   NOT NULL,
     user_otp           varchar(256)   NOT NULL,
-    has_active_trip    boolean        NOT NULL
+    mapshare_id        varchar(256)
+    );
+    """
+
+    create_device_tables = """
+    CREATE TABLE IF NOT EXISTS devices (
+    device_id          serial         PRIMARY KEY,
+    user_id            integer        NOT NULL,
+    garmin_device_id   integer        NOT NULL
     );
     """
 
@@ -38,11 +50,10 @@ class SqlQueries:
     CREATE TABLE IF NOT EXISTS trips (
     trip_id            serial         PRIMARY KEY,
     trip_pw            varchar(256),
-    user_id            integer,
-    start_date         timestamp,
-    last_location      geometry(Point, 4326),
-    last_update        timestamp,
-    trip_complete      boolean
+    user_id            integer        NOT NULL,
+    device_id          integer        NOT NULL,
+    start_date         timestamp      NOT NULL,
+    end_date           timestamp      NOT NULL
     );
 
     CREATE TABLE IF NOT EXISTS trip_points (
