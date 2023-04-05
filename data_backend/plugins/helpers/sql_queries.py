@@ -1,5 +1,4 @@
 
-
 class SqlQueries:
 
     # probably should have a safer separation of
@@ -38,7 +37,7 @@ class SqlQueries:
     );
     """
 
-    create_device_tables = """
+    create_device_table = """
     CREATE TABLE IF NOT EXISTS devices (
     device_id          serial         PRIMARY KEY,
     user_id            integer        NOT NULL,
