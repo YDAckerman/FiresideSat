@@ -16,9 +16,6 @@ class SqlQueries:
 
     drop_user_table = """
     DROP TABLE IF EXISTS users;
-    """
-
-    drop_device_table = """
     DROP TABLE IF EXISTS devices;
     """
 
@@ -33,22 +30,21 @@ class SqlQueries:
     user_id            serial         PRIMARY KEY,
     user_email         varchar(256)   NOT NULL,
     user_otp           varchar(256)   NOT NULL,
-    mapshare_id        varchar(256)
+    mapshare_id        varchar(256),
+    mapshare_pw        varchar(256)
     );
-    """
 
-    create_device_table = """
     CREATE TABLE IF NOT EXISTS devices (
     device_id          serial         PRIMARY KEY,
     user_id            integer        NOT NULL,
-    garmin_device_id   integer        NOT NULL
+    garmin_imei        varchar(256)   NOT NULL,
+    garmin_device_id   varchar(256)   NOT NULL
     );
     """
 
     create_trip_tables = """
     CREATE TABLE IF NOT EXISTS trips (
     trip_id            serial         PRIMARY KEY,
-    trip_pw            varchar(256),
     user_id            integer        NOT NULL,
     device_id          integer        NOT NULL,
     start_date         timestamp      NOT NULL,
@@ -59,6 +55,7 @@ class SqlQueries:
     point_id           serial                   PRIMARY KEY,
     trip_id            integer                  NOT NULL,
     last_location      geometry(Point, 4326)    NOT NULL,
+    garmin_device_id   varchar(256),
     last_update        timestamp                NOT NULL
     );
 
@@ -68,6 +65,7 @@ class SqlQueries:
     raw_lat            numeric        NOT NULL,
     last_location geometry(Point, 4326) GENERATED ALWAYS AS (
          ST_SetSRID(ST_MakePoint(raw_lon, raw_lat), 4326)) STORED,
+    garmin_device_id   varchar(256),
     last_update        timestamp      NOT NULL
     );
     """
@@ -272,4 +270,19 @@ class SqlQueries:
     INSERT INTO staging_aqi (incident_id, date, hour,
                              raw_lat, raw_lon, aqi)
     VALUES %s
+    """
+
+    insert_staging_trip_points = """
+    INSERT INTO staging_trip_points (raw_lon, raw_lat,
+                                     garmin_device_id, last_update)
+    VALUES %s
+    """
+
+    select_active_users = """
+    SELECT user_id, trip_id, garmin_imei, mapshare_id, mapshare_pw
+    FROM users
+    JOIN trips ON users.user_id = trips.user_id
+    JOIN devices ON trips.device_id = devices.device_id
+    WHERE trips.start_date >= %(date)
+    AND   trips.end_date <= %(date);
     """

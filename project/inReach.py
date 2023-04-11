@@ -3,16 +3,26 @@ import configparser
 import json
 import re
 
+from pykml import parser
+from pykml import util
+
 
 def get_user_info(user, pw):
     #
     # - queries feed url
     # - returns json response
 
+    user ="WURUE"
+    pw ="hV3DSaqfa0qR7X09V0iX"
+    imei ="300434030014150"
+    
     url = f"https://explore.garmin.com/feed/share/{user}"
 
     # url = f"https://explore.garmin.com/feed/share/{user}" + \
     #     "?d1=2022-08-01T06:00z&d2=2022-10-01T15:00z"
+
+    url = f"https://explore.garmin.com/feed/share/{user}" + \
+        f"?imei={imei}"
     response = requests.get(url, auth=(user, pw))
 
     # won't always work.
@@ -23,11 +33,11 @@ def get_user_info(user, pw):
     # timestamp = re.findall(r'<TimeStamp>\s+<when>(\S+)</when>\s+</TimeStamp>',
     #                        response.text)[-1]
 
-    # from pykml import parser
-    # from pykml import util
-    # root = parser.fromstring(bytes(response.text, encoding='utf8'))
-    # root.Document.Folder.Placemark.TimeStamp.when
-    # root.Document.Folder.Placemark.Point.coordinates
+
+    root = parser.fromstring(bytes(response.text, encoding='utf8'))
+    root.Document.Folder.Placemark.TimeStamp.when
+    root.Document.Folder.Placemark.Point.coordinates
+    root.Document.Folder.Placemark.ExtendedData.Data[7].value
 
     # resp = requests.get("https://developers.google.com/static/kml/documentation/KML_Samples.kml")
     # root = parser.fromstring(bytes(resp.text, encoding='utf8'))

@@ -53,3 +53,6 @@ class ApiCalls():
         + "AND" \
         + "%20(attr_POOState" \
         + "%20IN%20('US-CA'))&outFields=*"
+
+    mapshare_kml_endpoint = "https://explore.garmin.com/feed/share/{user}" \
+        + "?imei={imei}"
