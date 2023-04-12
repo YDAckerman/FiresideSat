@@ -2,9 +2,7 @@ from airflow.hooks.postgres_hook import PostgresHook
 from airflow.hooks.http_hook import HttpHook
 from airflow.models import BaseOperator
 from airflow.utils.decorators import apply_defaults
-
-import psycopg2.extras
-import json
+import base64
 
 
 class StageTripPointsOperator(BaseOperator):
@@ -36,8 +34,11 @@ class StageTripPointsOperator(BaseOperator):
         pg_conn = pg_hook.get_conn()
         pg_cur = pg_conn.cursor()
 
-        current_date = context.get('data_interval_start').to_date_string()
-        pg_cur.execute(self.internal_data_query, current_date)
+        current_date = context.get('data_interval_start')
+
+        pg_cur.execute(self.internal_data_query,
+                       [current_date]*2)
+
         records = pg_cur.fetchall()
 
         http_hook = HttpHook(method='GET',
@@ -48,31 +49,29 @@ class StageTripPointsOperator(BaseOperator):
             user_id, trip_id, garmin_imei, mapshare_id, mapshare_pw = record
 
             self.log.info("getting mapshare feed data for user: "
-                          + user_id)
+                          + str(user_id))
 
             endpoint = self.api_endpoint.format(user=mapshare_id,
                                                 imei=garmin_imei)
-            auth = {"auth": (mapshare_pw)}
+
+            usr_pw = f'{mapshare_id}:{mapshare_pw}'
+            b64_val = base64.b64encode(usr_pw.encode()).decode()
+            headers = {"Authorization": "Basic %s" % b64_val}
 
             # need auth (?)
             api_response = http_hook.run(endpoint=endpoint,
-                                         headers=auth)
+                                         headers=headers)
 
-            # note, the kml response gives the last point ONLY!
-            response = json.loads(api_response.text)
+            if api_response:
 
-            if response:
+                trip_values = [trip_id] + self.extractors[0](api_response)
 
-                # not currently loading properly
-                trip_point_values = self.extractors[0](response)
-                psycopg2.extras.execute_values(pg_cur,
-                                               self.loaders[0],
-                                               aqi_values)
+                pg_cur.execute(self.loaders[0], trip_values)
 
                 pg_conn.commit()
 
             else:
 
-                self.log.info("No response from AirNow API endpoint")
+                self.log.info("No response from MapShare KML Feed endpoint")
 
         pg_conn.close()

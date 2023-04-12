@@ -1,6 +1,5 @@
 from pykml import parser
-from pykml import util
-
+from datetime import datetime
 
 
 class DataExtractors():
@@ -44,14 +43,21 @@ class DataExtractors():
                         x['AQI']) for x in api_response]
         return tuples_list
 
-    def extract_kml_feed_points(api_response):
+    def extract_feed_values(api_response):
 
         # see for details on kml feed:
         # https://support.garmin.com/en-US/?faq=tdlDCyo1fJ5UxjUbA9rMY8
 
         root = parser.fromstring(bytes(api_response.text, encoding='utf8'))
-        timestamp = str(root.Document.Folder.Placemark.TimeStamp.when)
-        coords = str(root.Document.Folder.Placemark.Point.coordinates)
-        device_id = str(root.Document.Folder.Placemark.ExtendedData.Data[7].value)
 
-        return [timestamp, coords.split(",")[0:2], device_id]
+        # need to convert to datetime
+        time_last_update_str = str(root.Document.Folder.Placemark.TimeStamp.when)
+        time_last_update = datetime.strptime(time_last_update_str,
+                                  '%Y-%m-%dT%H:%M:%SZ')
+
+        coords = str(root.Document.Folder.Placemark.Point.coordinates)
+        device_id = str(root.Document.Folder.Placemark.ExtendedData.Data[17].value)
+        course = str(root.Document.Folder.Placemark.ExtendedData.Data[12].value)
+
+        return [time_last_update, *coords.split(",")[0:2],
+                device_id, course]

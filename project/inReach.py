@@ -6,6 +6,7 @@ import re
 from pykml import parser
 from pykml import util
 
+import base64
 
 def get_user_info(user, pw):
     #
@@ -15,9 +16,12 @@ def get_user_info(user, pw):
     user ="WURUE"
     pw ="hV3DSaqfa0qR7X09V0iX"
     imei ="300434030014150"
-    
-    url = f"https://explore.garmin.com/feed/share/{user}"
 
+
+    # usr_pw = f'{user}:{pw}'
+    # b64_val = base64.b64encode(usr_pw.encode()).decode()
+    # headers = {"Authorization": "Basic %s" % b64_val}
+    
     # url = f"https://explore.garmin.com/feed/share/{user}" + \
     #     "?d1=2022-08-01T06:00z&d2=2022-10-01T15:00z"
 
@@ -33,11 +37,11 @@ def get_user_info(user, pw):
     # timestamp = re.findall(r'<TimeStamp>\s+<when>(\S+)</when>\s+</TimeStamp>',
     #                        response.text)[-1]
 
-
     root = parser.fromstring(bytes(response.text, encoding='utf8'))
     root.Document.Folder.Placemark.TimeStamp.when
     root.Document.Folder.Placemark.Point.coordinates
-    root.Document.Folder.Placemark.ExtendedData.Data[7].value
+    root.Document.Folder.Placemark.ExtendedData.Data[17].value
+    root.Document.Folder.Placemark.ExtendedData.Data[12].value
 
     # resp = requests.get("https://developers.google.com/static/kml/documentation/KML_Samples.kml")
     # root = parser.fromstring(bytes(resp.text, encoding='utf8'))
@@ -63,6 +67,8 @@ def send_user_message(user, pw, device, msg):
     # - Note: this might be broken. access to the SendMessageToDevices
     # -       function might require the user name(?)
     #
+
+    
     url = f"https://share.garmin.com/{user}/Map/SendMessageToDevices"
     myobj = {'deviceIds': device,
              'fromAddr': 'FiresideSat',

@@ -22,7 +22,6 @@ class SqlQueries:
     drop_trip_tables = """
     DROP TABLE IF EXISTS trips;
     DROP TABLE IF EXISTS trip_points;
-    DROP TABLE IF EXISTS staging_trip_points;
     """
 
     create_user_table = """
@@ -56,9 +55,13 @@ class SqlQueries:
     trip_id            integer                  NOT NULL,
     last_location      geometry(Point, 4326)    NOT NULL,
     garmin_device_id   varchar(256),
+    course             varchar(256),
     last_update        timestamp                NOT NULL
     );
+    """
 
+    create_staging_trip_points = """
+    DROP TABLE IF EXISTS staging_trip_points;
     CREATE TABLE IF NOT EXISTS staging_trip_points (
     trip_id            serial         PRIMARY KEY,
     raw_lon            numeric        NOT NULL,
@@ -66,10 +69,11 @@ class SqlQueries:
     last_location geometry(Point, 4326) GENERATED ALWAYS AS (
          ST_SetSRID(ST_MakePoint(raw_lon, raw_lat), 4326)) STORED,
     garmin_device_id   varchar(256),
+    course             varchar(256),
     last_update        timestamp      NOT NULL
     );
     """
-
+    
     create_current_tables = """
     CREATE TABLE IF NOT EXISTS current_incidents (
     incident_id varchar(256) PRIMARY KEY,
@@ -273,16 +277,18 @@ class SqlQueries:
     """
 
     insert_staging_trip_points = """
-    INSERT INTO staging_trip_points (raw_lon, raw_lat,
-                                     garmin_device_id, last_update)
-    VALUES %s
+    INSERT INTO staging_trip_points (trip_id, last_update,
+                                     raw_lon, raw_lat,
+                                     garmin_device_id,
+                                     course)
+    VALUES (%s,%s,%s,%s,%s,%s);
     """
 
     select_active_users = """
-    SELECT user_id, trip_id, garmin_imei, mapshare_id, mapshare_pw
+    SELECT users.user_id, trip_id, garmin_imei, mapshare_id, mapshare_pw
     FROM users
     JOIN trips ON users.user_id = trips.user_id
     JOIN devices ON trips.device_id = devices.device_id
-    WHERE trips.start_date >= %(date)
-    AND   trips.end_date <= %(date);
+    WHERE trips.start_date <= %s
+    AND   trips.end_date >= %s;
     """
