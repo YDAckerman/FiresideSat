@@ -51,13 +51,13 @@ class DataExtractors():
         root = parser.fromstring(bytes(api_response.text, encoding='utf8'))
 
         # need to convert to datetime
-        time_last_update_str = str(root.Document.Folder.Placemark.TimeStamp.when)
-        time_last_update = datetime.strptime(time_last_update_str,
+        time_point_added_str = str(root.Document.Folder.Placemark.TimeStamp.when)
+        time_point_added = datetime.strptime(time_point_added_str,
                                   '%Y-%m-%dT%H:%M:%SZ')
 
         coords = str(root.Document.Folder.Placemark.Point.coordinates)
         device_id = str(root.Document.Folder.Placemark.ExtendedData.Data[17].value)
         course = str(root.Document.Folder.Placemark.ExtendedData.Data[12].value)
 
-        return [time_last_update, *coords.split(",")[0:2],
+        return [time_point_added, *coords.split(",")[0:2],
                 device_id, course]

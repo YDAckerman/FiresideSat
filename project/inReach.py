@@ -43,6 +43,8 @@ def get_user_info(user, pw):
     root.Document.Folder.Placemark.ExtendedData.Data[17].value
     root.Document.Folder.Placemark.ExtendedData.Data[12].value
 
+
+    datetime.strptime(str(root.Document.Folder.Placemark.TimeStamp.when), '%Y-%m-%dT%H:%M:%SZ')
     # resp = requests.get("https://developers.google.com/static/kml/documentation/KML_Samples.kml")
     # root = parser.fromstring(bytes(resp.text, encoding='utf8'))
     # root.Document.Folder[0].Placemark[1].Point.coordinates

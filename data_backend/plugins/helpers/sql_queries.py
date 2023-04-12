@@ -56,8 +56,21 @@ class SqlQueries:
     last_location      geometry(Point, 4326)    NOT NULL,
     garmin_device_id   varchar(256),
     course             varchar(256),
-    last_update        timestamp                NOT NULL
+    time_point_added        timestamp                NOT NULL
     );
+    """
+
+    upsert_trip_points = """
+    INSERT INTO trip_points (trip_id, last_location,
+                             garmin_device_id, course,
+                             time_point_added)
+    SELECT s.trip_id, s.last_location, s.garmin_device_id,
+                      s.course, s.time_point_added
+    FROM   staging_trip_points s LEFT JOIN trip_points t
+    ON     s.trip_id = t.trip_id
+    WHERE (s.time_point_added > t.time_point_added
+    AND    ST_Equals(s.last_location, t.last_location))
+    OR     t.trip_id IS NULL;
     """
 
     create_staging_trip_points = """
@@ -70,10 +83,10 @@ class SqlQueries:
          ST_SetSRID(ST_MakePoint(raw_lon, raw_lat), 4326)) STORED,
     garmin_device_id   varchar(256),
     course             varchar(256),
-    last_update        timestamp      NOT NULL
+    time_point_added        timestamp      NOT NULL
     );
     """
-    
+
     create_current_tables = """
     CREATE TABLE IF NOT EXISTS current_incidents (
     incident_id varchar(256) PRIMARY KEY,
@@ -139,7 +152,6 @@ class SqlQueries:
     );
     """
 
-    # TODO: create aqi_dag
     create_staging_aqi = """
     DROP TABLE IF EXISTS staging_aqi;
     CREATE TABLE IF NOT EXISTS staging_aqi (
@@ -277,7 +289,8 @@ class SqlQueries:
     """
 
     insert_staging_trip_points = """
-    INSERT INTO staging_trip_points (trip_id, last_update,
+    INSERT INTO staging_trip_points (trip_id,
+                                     time_point_added,
                                      raw_lon, raw_lat,
                                      garmin_device_id,
                                      course)
@@ -285,10 +298,33 @@ class SqlQueries:
     """
 
     select_active_users = """
-    SELECT users.user_id, trip_id, garmin_imei, mapshare_id, mapshare_pw
-    FROM users
-    JOIN trips ON users.user_id = trips.user_id
-    JOIN devices ON trips.device_id = devices.device_id
-    WHERE trips.start_date <= %s
-    AND   trips.end_date >= %s;
+    SELECT users.user_id, trip_id, garmin_imei,
+                          mapshare_id, mapshare_pw
+    FROM   users
+    JOIN   trips ON users.user_id = trips.user_id
+    JOIN   devices ON trips.device_id = devices.device_id
+    WHERE  trips.start_date <= %s
+    AND    trips.end_date >= %s;
+    """
+
+    # add a check that last_update is within trip range
+    # as the last updated point could in fact be outdated.
+    select_user_incidents = """
+    SELECT users.user_id, trip_id, garmin_imei,
+                          mapshare_id, mapshare_pw
+    FROM   users
+    JOIN   trips ON users.user_id = trips.user_id
+    JOIN   (
+        SELECT * FROM trip_points t1 JOIN (
+          SELECT trip_id,
+                 MAX(time_point_added) AS last_update
+          FROM trip_points
+          GROUP_BY trip_id
+        ) t2 ON t1.trip_id = t2.trip_id
+        WHERE t1.time_point_added = t2.last_update
+    ) points ON trips.trip_id = points.trip_id
+    WHERE  trips.start_date <= %s
+    AND    trips.end_date >= %s
+    AND    points.last_update >= trips.start_date
+    AND    points.last_update <= trips.end_date;
     """
