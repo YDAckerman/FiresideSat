@@ -56,19 +56,19 @@ class SqlQueries:
     last_location      geometry(Point, 4326)    NOT NULL,
     garmin_device_id   varchar(256),
     course             varchar(256),
-    time_point_added        timestamp                NOT NULL
+    date        timestamp                NOT NULL
     );
     """
 
     upsert_trip_points = """
     INSERT INTO trip_points (trip_id, last_location,
                              garmin_device_id, course,
-                             time_point_added)
+                             date)
     SELECT s.trip_id, s.last_location, s.garmin_device_id,
-                      s.course, s.time_point_added
+                      s.course, s.date
     FROM   staging_trip_points s LEFT JOIN trip_points t
     ON     s.trip_id = t.trip_id
-    WHERE (s.time_point_added > t.time_point_added
+    WHERE (s.date > t.date
     AND    ST_Equals(s.last_location, t.last_location))
     OR     t.trip_id IS NULL;
     """
@@ -83,7 +83,7 @@ class SqlQueries:
          ST_SetSRID(ST_MakePoint(raw_lon, raw_lat), 4326)) STORED,
     garmin_device_id   varchar(256),
     course             varchar(256),
-    time_point_added        timestamp      NOT NULL
+    date        timestamp      NOT NULL
     );
     """
 
@@ -290,7 +290,7 @@ class SqlQueries:
 
     insert_staging_trip_points = """
     INSERT INTO staging_trip_points (trip_id,
-                                     time_point_added,
+                                     date,
                                      raw_lon, raw_lat,
                                      garmin_device_id,
                                      course)
@@ -310,21 +310,75 @@ class SqlQueries:
     # add a check that last_update is within trip range
     # as the last updated point could in fact be outdated.
     select_user_incidents = """
-    SELECT users.user_id, trip_id, garmin_imei,
-                          mapshare_id, mapshare_pw
-    FROM   users
-    JOIN   trips ON users.user_id = trips.user_id
-    JOIN   (
-        SELECT * FROM trip_points t1 JOIN (
-          SELECT trip_id,
-                 MAX(time_point_added) AS last_update
-          FROM trip_points
-          GROUP_BY trip_id
-        ) t2 ON t1.trip_id = t2.trip_id
-        WHERE t1.time_point_added = t2.last_update
-    ) points ON trips.trip_id = points.trip_id
-    WHERE  trips.start_date <= %s
-    AND    trips.end_date >= %s
-    AND    points.last_update >= trips.start_date
-    AND    points.last_update <= trips.end_date;
+    SELECT u.user_id, t.trip_id, p.garmin_device_id,
+           u.mapshare_id, u.mapshare_pw,
+           ci.incident_name,
+           ci.date_current AS incident_time_last_update,
+           ci.behavior AS incident_behavior,
+           ca.date AS aqi_time_last_update,
+           ca.aqi  AS incident_aqi
+           ST_X(ST_Transform(ci.centroid, 4326)) AS incident_long,
+           ST_Y(ST_Transform(ci.centroid, 4326)) AS incident_lat
+    FROM   (SELECT *
+            FROM trips
+            WHERE trips.start_date <= %s
+            AND   trips.end_date >= %s
+           ) t
+    JOIN   (SELECT *
+            FROM trip_points t1
+            JOIN (SELECT trip_id,
+                         MAX(date) AS last_update
+                  FROM trip_points
+                  GROUP_BY trip_id) t2
+            ON t1.trip_id = t2.trip_id
+            AND t1.date = t2.last_update
+           ) p
+    ON  t.trip_id = p.trip_id
+    AND p.last_update >= t.start_date
+    AND p.last_update <= t.end_date
+    JOIN current_incidents ci ON
+         ST_DWithin(p.last_location::geography,
+                    ci.centroid::geography,
+                    1220000) --meters
+    JOIN current_aqi ca ON ci.incident_id = ca.incident_id
+    JOIN users u ON t.user_id = u.user_id;
+    """
+
+    tmp = """
+    SELECT u.user_id, t.trip_id, p.garmin_device_id,
+           u.mapshare_id, u.mapshare_pw,
+           ci.incident_name,
+           ci.date_current AS incident_time_last_update,
+           ci.behavior AS incident_behavior,
+           ca.date AS aqi_time_last_update,
+           ca.aqi  AS incident_aqi,
+           ST_X(ST_Transform(ci.centroid, 4326)) AS incident_long,
+           ST_Y(ST_Transform(ci.centroid, 4326)) AS incident_lat
+    FROM   (SELECT *
+            FROM trips
+            WHERE trips.start_date <= TIMESTAMP '2021-04-01 10:23:54'
+            AND   trips.end_date >= TIMESTAMP '2021-04-01 10:23:54'
+           ) t
+    JOIN   (SELECT t1.trip_id, 
+                   t1.last_location, 
+                   t1.garmin_device_id,
+                   t2.last_update
+            FROM trip_points t1
+            JOIN (SELECT trip_id,
+                         MAX(date) AS last_update
+                  FROM trip_points
+                  GROUP BY trip_id
+                 ) t2
+            ON t1.trip_id = t2.trip_id
+            AND t1.date = t2.last_update
+           ) p
+    ON  t.trip_id = p.trip_id
+    -- AND p.last_update >= t.start_date
+    -- AND p.last_update <= t.end_date
+    JOIN current_incidents ci ON
+         ST_DWithin(p.last_location::geography,
+                    ci.centroid::geography,
+                    1220000) --meters
+    JOIN current_aqi ca ON ci.incident_id = ca.incident_id
+    JOIN users u ON t.user_id = u.user_id;
     """
