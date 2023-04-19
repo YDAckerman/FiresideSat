@@ -2,13 +2,8 @@ from datetime import datetime, timedelta
 from airflow import DAG
 from airflow.operators.dummy_operator import DummyOperator
 from airflow.operators.postgres_operator import PostgresOperator
-from airflow.models import Variable
-# from airflow.operators.python_operator import PythonOperator
-n
-from operators.stage_aqi_data_operator import StageAqiDataOperator
+from operators.stage_data_operator import StageDataOperator
 from helpers.sql_queries import SqlQueries
-from helpers.data_extractors import DataExtractors
-from helpers.api_calls import ApiCalls
 
 # ##############################################
 #  default arguments
@@ -49,16 +44,12 @@ create_staging_aqi = PostgresOperator(
     sql=SqlQueries.create_staging_aqi
 )
 
-stage_aqi_data_operator = StageAqiDataOperator(
+stage_aqi_data_operator = StageDataOperator(
     task_id="stage_aqi_data",
     dag=dag,
     postgres_conn_id="fireside",
     http_conn_id="airnow",
-    api_endpoint=ApiCalls.airnow_radius_url,
-    api_key=Variable.get("airnow_api_key"),
-    internal_data_query=SqlQueries.select_centroids,
-    extractors=[DataExtractors.extract_aqi_values],
-    loaders=[SqlQueries.insert_staging_aqi]
+    api_endpoint="airnow_endpoint"
 )
 
 upsert_current_operator = PostgresOperator(

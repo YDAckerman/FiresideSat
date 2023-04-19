@@ -3,11 +3,8 @@ from airflow import DAG
 from airflow.operators.dummy_operator import DummyOperator
 from airflow.operators.postgres_operator import PostgresOperator
 # from airflow.operators.python_operator import PythonOperator
-
-from operators.stage_trip_points_operator import StageTripPointsOperator
+from operators.stage_data_operator import StageDataOperator
 from helpers.sql_queries import SqlQueries
-from helpers.data_extractors import DataExtractors
-from helpers.api_calls import ApiCalls
 
 # ##############################################
 #  default arguments
@@ -23,7 +20,7 @@ default_args = {
 #  dag instantiation
 # ##############################################
 
-dag = DAG('test_kml_feed_dag',
+dag = DAG('kml_feed_dag',
           start_date=datetime(2021, 4, 1),
           end_date=datetime(2021, 4, 2),
           default_args=default_args,
@@ -33,7 +30,7 @@ dag = DAG('test_kml_feed_dag',
           catchup=True
           )
 
-start_operator = DummyOperator(task_id='Begin_kml_feed_Dag_Execution',
+start_operator = DummyOperator(task_id='Begin_Kml_Feed_Dag_Execution',
                                dag=dag)
 
 create_staging_trip_points = PostgresOperator(
@@ -43,15 +40,12 @@ create_staging_trip_points = PostgresOperator(
     sql=SqlQueries.create_staging_trip_points
 )
 
-stage_trip_points = StageTripPointsOperator(
+stage_trip_points = StageDataOperator(
     task_id="stage_kml_feed_data",
     dag=dag,
     postgres_conn_id="fireside",
     http_conn_id="mapshare_feed",
-    api_endpoint=ApiCalls.mapshare_feed_endpoint,
-    internal_data_query=SqlQueries.select_active_users,
-    extractors=[DataExtractors.extract_feed_values],
-    loaders=[SqlQueries.insert_staging_trip_points]
+    api_endpoint="mapshare_feed_endpoint"
 )
 
 upsert_trip_points = PostgresOperator(

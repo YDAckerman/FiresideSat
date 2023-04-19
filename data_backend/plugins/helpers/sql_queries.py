@@ -1,6 +1,13 @@
 
 class SqlQueries:
 
+    def __init__(self, test=None):
+        if test:
+            self.schema = "test"
+        else:
+            self.schema = "dev"
+        print("using sql queries")
+
     # probably should have a safer separation of
     # test and prod? For now I won't be using them.
     create_schemas = """
