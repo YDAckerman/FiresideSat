@@ -62,10 +62,8 @@ def create_user(cur, user_email):
                     'user_trips': False
                 })
 
+
 @click.command('test-create-user')
 @with_appcontext
 def test_create_user(user_email):
-
-    conn = get_conn()
-    cur = conn.cursor()
-    
+    pass

@@ -1,18 +1,32 @@
 
 class SqlQueries:
 
-    def __init__(self, test=None):
-        if test:
-            self.schema = "test"
-        else:
-            self.schema = "dev"
-        print("using sql queries")
+    def __init__(self, test=False):
 
-    # probably should have a safer separation of
-    # test and prod? For now I won't be using them.
-    create_schemas = """
-    CREATE SCHEMA IF NOT EXISTS dev;
-    CREATE SCHEMA IF NOT EXISTS test;
+        if test:
+            schema = "test"
+        else:
+            schema = "public"
+
+        self.current_schema = schema
+        self.set_schema = f"SET search_path TO {schema};"
+        self.unset_schema = "SET search_path TO public;"
+        print(f"running sql queries on schema {schema}")
+
+        self.create_schema = f"""
+        CREATE SCHEMA IF NOT EXISTS {schema};
+        """
+
+    create_test_schema = """
+    CREATE SCHEMA IF NOT EXISTS text;
+    """
+
+    set_test_search_path = """
+    SET search_path TO test;
+    """
+
+    unset_test_search_path = """
+    SET search_path TO public;
     """
 
     drop_current_tables = """
@@ -317,75 +331,77 @@ class SqlQueries:
     # add a check that last_update is within trip range
     # as the last updated point could in fact be outdated.
     select_user_incidents = """
-    SELECT u.user_id, t.trip_id, p.garmin_device_id,
-           u.mapshare_id, u.mapshare_pw,
-           ci.incident_name,
-           ci.date_current AS incident_time_last_update,
-           ci.behavior AS incident_behavior,
-           ca.date AS aqi_time_last_update,
-           ca.aqi  AS incident_aqi
-           ST_X(ST_Transform(ci.centroid, 4326)) AS incident_long,
-           ST_Y(ST_Transform(ci.centroid, 4326)) AS incident_lat
-    FROM   (SELECT *
-            FROM trips
-            WHERE trips.start_date <= %s
-            AND   trips.end_date >= %s
-           ) t
-    JOIN   (SELECT *
-            FROM trip_points t1
-            JOIN (SELECT trip_id,
-                         MAX(date) AS last_update
-                  FROM trip_points
-                  GROUP_BY trip_id) t2
-            ON t1.trip_id = t2.trip_id
-            AND t1.date = t2.last_update
-           ) p
-    ON  t.trip_id = p.trip_id
-    AND p.last_update >= t.start_date
-    AND p.last_update <= t.end_date
-    JOIN current_incidents ci ON
-         ST_DWithin(p.last_location::geography,
-                    ci.centroid::geography,
-                    1220000) --meters
-    JOIN current_aqi ca ON ci.incident_id = ca.incident_id
-    JOIN users u ON t.user_id = u.user_id;
-    """
 
-    tmp = """
-    SELECT u.user_id, t.trip_id, p.garmin_device_id,
-           u.mapshare_id, u.mapshare_pw,
-           ci.incident_name,
-           ci.date_current AS incident_time_last_update,
-           ci.behavior AS incident_behavior,
-           ca.date AS aqi_time_last_update,
-           ca.aqi  AS incident_aqi,
-           ST_X(ST_Transform(ci.centroid, 4326)) AS incident_long,
-           ST_Y(ST_Transform(ci.centroid, 4326)) AS incident_lat
+    CREATE TEMP TABLE points_to_perims AS
+    SELECT active_trips.trip_id,
+           active_trips.user_id,
+           latest_points.last_location,
+           latest_points.last_update,
+           cp.incident_id,
+           cp.geom AS perimeter_geom,
+           ST_Distance(latest_points.last_location::geography,
+                       cp.geom::geography) AS dist_m_to_perimeter
     FROM   (SELECT *
             FROM trips
-            WHERE trips.start_date <= TIMESTAMP '2021-04-01 10:23:54'
-            AND   trips.end_date >= TIMESTAMP '2021-04-01 10:23:54'
-           ) t
-    JOIN   (SELECT t1.trip_id, 
-                   t1.last_location, 
-                   t1.garmin_device_id,
+            WHERE trips.start_date <= TIMESTAMP '2022-09-01'
+            AND   trips.end_date >= TIMESTAMP '2022-09-01'
+           ) active_trips
+    JOIN   (SELECT t1.last_location,
+                   t1.trip_id,
                    t2.last_update
             FROM trip_points t1
             JOIN (SELECT trip_id,
                          MAX(date) AS last_update
                   FROM trip_points
-                  GROUP BY trip_id
-                 ) t2
+                  GROUP BY trip_id) t2
             ON t1.trip_id = t2.trip_id
             AND t1.date = t2.last_update
-           ) p
-    ON  t.trip_id = p.trip_id
-    -- AND p.last_update >= t.start_date
-    -- AND p.last_update <= t.end_date
-    JOIN current_incidents ci ON
-         ST_DWithin(p.last_location::geography,
-                    ci.centroid::geography,
+           ) latest_points
+    ON   active_trips.trip_id = latest_points.trip_id
+    AND  latest_points.last_update >= active_trips.start_date
+    AND  latest_points.last_update <= active_trips.end_date
+    JOIN current_perimeters cp
+    ON   ST_DWithin(latest_points.last_location::geography,
+                    cp.geom::geography,
                     1220000) --meters
-    JOIN current_aqi ca ON ci.incident_id = ca.incident_id
-    JOIN users u ON t.user_id = u.user_id;
+    ;
+
+    SELECT ptp.trip_id,
+           ptp.user_id,
+           ci.incident_name,
+           ci.behavior AS incident_behavior,
+           ci.date_current AS incident_time_last_update,
+           md.dist_m_min AS dist_m_to_perimeter,
+           ST_X(ST_Transform(ptp.perimeter_geom, 4326)) AS perimeter_lon,
+           ST_Y(ST_Transform(ptp.perimeter_geom, 4326)) AS perimeter_lat,
+           ST_Distance(ptp.last_location::geography,
+                       ci.centroid::geography) AS dist_m_to_centroid,
+           ST_X(ST_Transform(ci.centroid, 4326)) AS centroid_lon,
+           ST_Y(ST_Transform(ci.centroid, 4326)) AS centroid_lat,
+           ca.max_aqi,
+           ca.date AS aqi_date_last_update,
+           ca.hour AS aqi_hour_last_update,
+           ST_X(ST_Transform(ca.geom, 4326)) AS aqi_obs_lon,
+           ST_Y(ST_Transform(ca.geom, 4326)) AS aqi_obs_lat
+    FROM points_to_perims ptp
+    JOIN (SELECT incident_id,
+                 MIN(dist_m_to_perimeter) AS dist_m_min
+          FROM points_to_perims
+          GROUP BY incident_id
+          ) md
+    ON ptp.incident_id = md.incident_id
+    AND ptp.dist_m_to_perimeter = md.dist_m_min
+    JOIN current_incidents ci ON md.incident_id = ci.incident_id
+    JOIN (
+          SELECT c1.incident_id, c1.geom, c1.date, c1.hour, c2.max_aqi
+          FROM current_aqi c1
+          JOIN (
+                SELECT incident_id, MAX(aqi) AS max_aqi
+                FROM current_aqi
+                GROUP BY incident_id) c2
+          ON c1.incident_id = c2.incident_id
+          AND c1.aqi = c2.max_aqi
+    ) ca
+    ON md.incident_id = ca.incident_id;
+
     """

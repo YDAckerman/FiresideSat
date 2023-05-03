@@ -70,11 +70,20 @@ def send_user_message(user, pw, device, msg):
     # -       function might require the user name(?)
     #
 
+
+    msg = "testing - no device id"
     
     url = f"https://share.garmin.com/{user}/Map/SendMessageToDevices"
     myobj = {'deviceIds': device,
-             'fromAddr': 'FiresideSat',
+             'fromAddr': 'no_reply@firesidesat.com',
              'messageText': msg}
+
+    myobj = {
+        'deviceIds': "000000",
+        'fromAddr': 'no_reply@firesidesat.com',
+        'messageText': msg}
+    
+
     response = requests.post(url, auth=('', pw), json=myobj)
     return(json.loads(response.text)["success"])
 

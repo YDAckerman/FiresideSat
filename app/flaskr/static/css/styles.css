@@ -1,0 +1,36 @@
+
+.center-banner {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    font-family: "Courier", monospace;
+}
+
+.center-options {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+}
+
+.login-box {
+    width: 40%;
+}
+
+.usr-login {
+    margin-top: 10px;
+    display: flex;
+    justify-content: space-between;
+}
+
+.sign-button {
+    display: flex;
+    justify-content: center;
+    margin-top: 20px;
+}
+
+.signup-box {
+    display: flex;
+    justify-content: center;
+    margin-top: 20px;
+    font-size: 20px;
+}
