@@ -1,5 +1,5 @@
-from .sql_queries import SqlQueries
-from .api_endpoint import ApiEndpoint
+from helpers.sql_queries import SqlQueries
+from helpers.api_endpoint import ApiEndpoint
 from pykml import parser
 from datetime import datetime
 import psycopg2.extras
