@@ -3,8 +3,15 @@ import sys
 sys.path.insert(0, os.path.abspath("./flaskr"))
 
 from flask import Flask, render_template, request
-from helpers.db import get_conn
-from helpers.transactions import add_new_user
+# from flask_sqlalchemy import SQLAlchemy
+# from helpers.db import get_conn
+# from helpers.transactions import add_new_user
+
+
+# Create app
+
+# app = Flask(__name__)
+# app.config['DEBUG'] = True
 
 
 def create_app(test_config=None):
@@ -39,7 +46,8 @@ def create_app(test_config=None):
 
     @app.route('/new_user')
     def new_user():
-        return render_template("new_user.html")
+        result = {'none': ""}
+        return render_template("new_user.html", result=result)
 
     @app.route('/register', methods=['POST'])
     def register():
@@ -48,8 +56,8 @@ def create_app(test_config=None):
         # mapshare_password = request.form.get('mapshare_password')
         # conn = get_conn()
         # result = add_new_user(conn, email, mapshare_id, mapshare_password)
-        result = ["success!"]
+        result = {"success": "You have been registered."}
 
-        Return render_template("new_user_response.html", result=result)
+        return render_template("new_user.html", result=result)
 
     return app
