@@ -4,8 +4,8 @@ sys.path.insert(0, os.path.abspath("./flaskr"))
 
 from flask import Flask, render_template, request
 # from flask_sqlalchemy import SQLAlchemy
-# from helpers.db import get_conn
-# from helpers.transactions import add_new_user
+from helpers.db import get_conn
+from helpers.transactions import add_new_user
 
 
 # Create app
