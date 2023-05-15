@@ -1,12 +1,24 @@
 import os
 import sys
+import psycopg2
+import configparser
+from flask import Flask, render_template, request, g
 sys.path.insert(0, os.path.abspath("./flaskr"))
 
-from flask import Flask, render_template, request
-# from flask_sqlalchemy import SQLAlchemy
-from helpers.db import get_conn
-from helpers.transactions import add_new_user
+from helpers.user import User
+from helpers.result import Result
+# from helpers.trip import Trip
 
+config = configparser.ConfigParser()
+config.read('./fireside.cfg')
+
+g.conn = psycopg2.connect(
+    database=config['DB']['DB_NAME'],
+    user=config['DB']['DB_USER'],
+    password=config['DB']['DB_PASSWORD'],
+    host=config['DB']['DB_HOST'],
+    port=config['DB']['DB_PORT'],
+)
 
 # Create app
 
@@ -17,10 +29,6 @@ from helpers.transactions import add_new_user
 def create_app(test_config=None):
     # create and configure the app
     app = Flask(__name__, instance_relative_config=True)
-    # app.config.from_mapping(
-    #     SECRET_KEY='dev',
-    #     DATABASE=os.path.join(app.instance_path, 'flaskr.sqlite'),
-    # )
 
     if test_config is None:
         # load the instance config, if it exists, when not testing
@@ -35,29 +43,21 @@ def create_app(test_config=None):
     # except OSError:
     #     pass
 
-    # a simple page that says hello
-    # @app.route('/hello')
-    # def hello():
-    #     return 'Hello, World!'
-
     @app.route('/')
     def index():
         return render_template("index.html")
 
     @app.route('/new_user')
     def new_user():
-        result = {'none': ""}
-        return render_template("new_user.html", result=result)
+        empty_result = Result(None, "")
+        return render_template("new_user.html", result=empty_result)
 
-    @app.route('/register', methods=['POST'])
+    @app.route('/new_user', methods=['POST'])
     def register():
-        # email = request.form.get('email')
-        # mapshare_id = request.form.get('mapshare_id')
-        # mapshare_password = request.form.get('mapshare_password')
-        # conn = get_conn()
-        # result = add_new_user(conn, email, mapshare_id, mapshare_password)
-        result = {"success": "You have been registered."}
-
-        return render_template("new_user.html", result=result)
+        usr = User(request.form.get('email'),
+                   request.form.get('mapshare_id'),
+                   request.form.get('mapshare_password'))
+        registration_result = usr.register(g.conn)
+        return render_template("new_user.html", result=registration_result)
 
     return app

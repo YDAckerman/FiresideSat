@@ -57,6 +57,7 @@ class SqlQueries:
     CREATE TABLE IF NOT EXISTS devices (
     device_id          serial         PRIMARY KEY,
     user_id            integer        NOT NULL,
+    garmin_imei        varchar(256),
     garmin_device_id   varchar(256)
     );
     """
@@ -74,22 +75,18 @@ class SqlQueries:
     point_id           serial                   PRIMARY KEY,
     trip_id            integer                  NOT NULL,
     last_location      geometry(Point, 4326)    NOT NULL,
-    garmin_device_id   varchar(256),
     course             varchar(256),
     date        timestamp                NOT NULL
     );
     """
 
     upsert_trip_points = """
-    INSERT INTO trip_points (trip_id, last_location,
-                             garmin_device_id, course,
-                             date)
-    SELECT s.trip_id, s.last_location, s.garmin_device_id,
-                      s.course, s.date
+    INSERT INTO trip_points (trip_id, last_location, course, date)
+    SELECT s.trip_id, s.last_location, s.course, s.date
     FROM   staging_trip_points s LEFT JOIN trip_points t
     ON     s.trip_id = t.trip_id
-    WHERE (s.date > t.date
-    AND    ST_Equals(s.last_location, t.last_location))
+    WHERE (s.date > t.date)
+    -- AND NOT ST_Equals(s.last_location, t.last_location))
     OR     t.trip_id IS NULL;
     """
 
@@ -101,7 +98,6 @@ class SqlQueries:
     raw_lat            numeric        NOT NULL,
     last_location geometry(Point, 4326) GENERATED ALWAYS AS (
          ST_SetSRID(ST_MakePoint(raw_lon, raw_lat), 4326)) STORED,
-    garmin_device_id   varchar(256),
     course             varchar(256),
     date        timestamp      NOT NULL
     );
@@ -311,10 +307,10 @@ class SqlQueries:
     insert_staging_trip_points = """
     INSERT INTO staging_trip_points (trip_id,
                                      date,
-                                     raw_lon, raw_lat,
-                                     garmin_device_id,
+                                     raw_lon,
+                                     raw_lat,
                                      course)
-    VALUES (%s,%s,%s,%s,%s,%s);
+    VALUES (%s,%s,%s,%s,%s);
     """
 
     select_active_users = """

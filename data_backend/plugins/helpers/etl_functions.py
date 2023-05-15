@@ -100,7 +100,6 @@ class EtlFunctions():
             b64_val = base64.b64encode(usr_pw.encode()).decode()
             headers = {"Authorization": "Basic %s" % b64_val}
 
-            # need auth (?)
             api_response = http_hook.run(endpoint=endpoint,
                                          headers=headers)
 
@@ -211,14 +210,15 @@ class EtlFunctions():
                                              '%Y-%m-%dT%H:%M:%SZ')
 
         coords = str(root.Document.Folder.Placemark.Point.coordinates)
-        device_id = str(root.Document
-                        .Folder
-                        .Placemark.ExtendedData
-                        .Data[17].value)
+        # device_id = str(root.Document
+        #                 .Folder
+        #                 .Placemark.ExtendedData
+        #                 .Data[17].value)
         course = str(root.Document
                      .Folder
                      .Placemark.ExtendedData
                      .Data[12].value)
 
         return [time_point_added, *coords.split(",")[0:2],
-                device_id, course]
+                ## device_id,
+                course]
