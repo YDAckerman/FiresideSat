@@ -1,5 +1,6 @@
 from helpers.sql_queries import SqlQueries
 from helpers.api_endpoint import ApiEndpoint
+from helpers.comms import Comms
 from pykml import parser
 from datetime import datetime
 import psycopg2.extras
@@ -13,9 +14,13 @@ class EtlFunctions():
         print("using etl functions")
         self.sql = SqlQueries()
         self.api = ApiEndpoint()
+        self.comms = Comms()
 
     def load_from_endpoint(self,
-                           endpoint, http_hook, pg_conn, pg_cur, context, log):
+                           endpoint, http_hook, pg_hook, context, log):
+
+        pg_conn = pg_hook.get_conn()
+        pg_cur = pg_conn.cursor()
 
         if endpoint == "wildfire_endpoint":
 
@@ -35,6 +40,8 @@ class EtlFunctions():
         else:
 
             log.info("No functionality for the provided enpoint.")
+
+        pg_conn.close()
 
     def _load_from_wildfire_endpoint(self, http_hook,
                                      pg_conn, pg_cur, context, log):
@@ -96,9 +103,7 @@ class EtlFunctions():
                                  {"mapshare_id": mapshare_id,
                                   "garmin_imei": garmin_imei}) \
 
-            usr_pw = f'{mapshare_id}:{mapshare_pw}'
-            b64_val = base64.b64encode(usr_pw.encode()).decode()
-            headers = {"Authorization": "Basic %s" % b64_val}
+            headers = self.comms.make_headers(mapshare_id, mapshare_pw)
 
             api_response = http_hook.run(endpoint=endpoint,
                                          headers=headers)
