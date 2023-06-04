@@ -313,6 +313,17 @@ class SqlQueries:
     VALUES (%s,%s,%s,%s,%s);
     """
 
+    select_state_change_users = """
+    SELECT users.mapshare_id, users.mapshare_pw,
+           trips.start_date, trips.end_date
+           devices.garmin_device_id
+    FROM   users
+    JOIN   trips ON users.user_id = trips.user_id
+    JOIN   devices ON trips.device_id = devices.device_id
+    WHERE  trips.start_date == %s
+    OR     trips.end_date == %s;
+    """
+
     select_active_users = """
     SELECT users.user_id, trip_id, garmin_imei,
                           mapshare_id, mapshare_pw
@@ -325,6 +336,7 @@ class SqlQueries:
 
     # add a check that last_update is within trip range
     # as the last updated point could in fact be outdated.
+    # NOTE: THE DATE BOUNDS NEED TO BE CHANGED!!!
     select_user_incidents = """
 
     CREATE TEMP TABLE points_to_perims AS

@@ -15,7 +15,7 @@ class ApiEndpoint():
             else:
                 return self._format_wildfire_endpoint(context)
 
-        if endpoint_name == "airnow_endpoint":
+        elif endpoint_name == "airnow_endpoint":
 
             if context is None:
                 raise ValueError("This endpoint requires context data")
@@ -26,11 +26,20 @@ class ApiEndpoint():
                                                     context.get('lon'),
                                                     api_key)
 
-        if endpoint_name == "mapshare_feed_endpoint":
+        elif endpoint_name == "mapshare_feed_endpoint":
 
             return self._mapshare_feed_endpoint \
                        .format(user=context.get("mapshare_id"),
                                imei=context.get("garmin_imei"))
+
+        elif endpoint_name == "send_message_endpoint":
+
+            return self._send_message_endpoint \
+                       .format(user=context.get("mapshare_id"))
+
+        else:
+
+            raise ValueError("Unrecognized enpoint")
 
     def _format_airnow_endpoint(self, lat, lon, api_key):
 
@@ -102,3 +111,5 @@ class ApiEndpoint():
         + "%20IN%20('US-CA'))&outFields=*"
 
     _mapshare_feed_endpoint = "{user}?imei={imei}"
+
+    _message_user_endpoint = "{user}/Map/SendMessageToDevices"
