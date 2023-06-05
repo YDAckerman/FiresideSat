@@ -3,6 +3,7 @@ from helpers.sql_queries import SqlQueries
 from helpers.api_endpoint import ApiEndpoint
 import json
 import base64
+import requests
 
 # from selenium import webdriver
 # from selenium.webdriver.support.ui import WebDriverWait
@@ -22,34 +23,37 @@ class Comms():
         http_hook = HttpHook(method='POST', http_conn_id=service_name)
         pg_conn = pg_hook.get_conn()
         pg_cur = pg_conn.cursor()
-
         current_date = context.get('data_interval_start')
 
         if message_type == "trip_state":
 
             pg_cur.execute(self.sql.select_state_change_users,
-                           [current_date]*2)
+                           [current_date]*3)
             records = pg_cur.fetchall()
 
             for record in records:
 
-                usr, pw, start_date, end_date, device_id = record
-                msg = f'{msg_head} incident reports for {usr}' \
+                usr, pw, start_date, end_date, device_id, state = record
+                msg = f'{state} incident reports for {usr} ' \
                     + f'for trip dates {start_date} to {end_date}'
 
                 data = self._make_message(device_id, msg)
-                endpoint = self.api.format_endpoint("send_message_endpoint",
-                                                    usr)
-                headers = self.make_headers(usr, pw)
-                response = http_hook.run(endpoint=endpoint,
-                                         data=data,
-                                         headers=headers)
-                if json.loads(response.text)["success"]:
-                    log.info(f'{msg_head} message successfully '
-                             + f'sent to {usr} at {current_date}')
-                else:
-                    log.info(f'There was an error sending {msg_head} message'
-                             + f'to {usr} at {current_date}')
+                url = self.api.format_endpoint("send_message_endpoint",
+                                               {'mapshare_id': usr})
+                headers = self.make_headers('', pw)
+                try:
+                    # response = http_hook.run(endpoint=endpoint,
+                    #                          headers=headers,
+                    #                          json=data)
+                    response = requests.post(url, auth=('', pw), json=data)
+                    if json.loads(response.text)["success"]:
+                        log.info(f'{state} message successfully '
+                                 + f'sent to {usr} at {current_date}')
+                    else:
+                        log.info(f'There was an error sending {state} message'
+                                 + f'to {usr} at {current_date}')
+                except Exception as e:
+                    log.info(e)
 
         elif message_type == "incident_report":
 
@@ -62,7 +66,7 @@ class Comms():
     @staticmethod
     def _make_message(device_id, msg):
         return {'deviceIds': device_id,
-                'fromAddr': 'firesidesat',
+                'fromAddr': 'noreply@firesidesat.com',
                 'messageText': msg}
 
     @staticmethod

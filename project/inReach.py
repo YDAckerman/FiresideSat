@@ -71,7 +71,9 @@ def send_user_message(user, pw, device, msg):
     #
 
 
-    msg = "testing - no device id"
+    msg = "is this still working?"
+
+    device = "448739"
     
     url = f"https://share.garmin.com/{user}/Map/SendMessageToDevices"
     myobj = {'deviceIds': device,

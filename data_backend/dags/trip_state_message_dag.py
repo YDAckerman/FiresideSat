@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta
 from airflow import DAG
 from airflow.operators.dummy_operator import DummyOperator
+from operators.send_messages_operator import SendMessagesOperator
 
 # ##############################################
 #  default arguments
@@ -31,10 +32,19 @@ start_operator = DummyOperator(task_id='Begin_Trip_State_'
                                + 'Message_Dag_Execution',
                                dag=dag)
 
+send_msgs_operator = SendMessagesOperator(
+    task_id="send_trip_state_messages",
+    postgres_conn_id='fireside',
+    service_name='garmin_share',
+    message_type='trip_state'
+)
+
 end_operator = DummyOperator(task_id='Stop_execution', dag=dag)
 
 # ##############################################
 #  dag structure
 # ##############################################
 
-start_operator >> end_operator
+start_operator >> send_msgs_operator
+
+send_msgs_operator >> end_operator

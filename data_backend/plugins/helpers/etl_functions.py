@@ -5,7 +5,6 @@ from pykml import parser
 from datetime import datetime
 import psycopg2.extras
 import json
-import base64
 
 
 class EtlFunctions():

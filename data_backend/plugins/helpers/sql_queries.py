@@ -315,13 +315,16 @@ class SqlQueries:
 
     select_state_change_users = """
     SELECT users.mapshare_id, users.mapshare_pw,
-           trips.start_date, trips.end_date
-           devices.garmin_device_id
+           trips.start_date, trips.end_date,
+           devices.garmin_device_id,
+           CASE WHEN trips.start_date::date = (%s)::date THEN 'Starting'
+                ELSE 'Stopping' END
+           AS state
     FROM   users
     JOIN   trips ON users.user_id = trips.user_id
     JOIN   devices ON trips.device_id = devices.device_id
-    WHERE  trips.start_date == %s
-    OR     trips.end_date == %s;
+    WHERE  trips.start_date::date = (%s)::date
+    OR     trips.end_date::date = (%s)::date;
     """
 
     select_active_users = """

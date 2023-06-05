@@ -28,14 +28,20 @@ class ApiEndpoint():
 
         elif endpoint_name == "mapshare_feed_endpoint":
 
-            return self._mapshare_feed_endpoint \
-                       .format(user=context.get("mapshare_id"),
-                               imei=context.get("garmin_imei"))
+            if context is None:
+                raise ValueError("This endpoint requires context data")
+            else:
+                return self._mapshare_feed_endpoint \
+                           .format(user=context.get("mapshare_id"),
+                                   imei=context.get("garmin_imei"))
 
         elif endpoint_name == "send_message_endpoint":
 
-            return self._send_message_endpoint \
-                       .format(user=context.get("mapshare_id"))
+            if context is None:
+                raise ValueError("This endpoint requires context data")
+            else:
+                return self._send_message_endpoint \
+                           .format(user=context.get("mapshare_id"))
 
         else:
 
@@ -112,4 +118,4 @@ class ApiEndpoint():
 
     _mapshare_feed_endpoint = "{user}?imei={imei}"
 
-    _message_user_endpoint = "{user}/Map/SendMessageToDevices"
+    _send_message_endpoint = "https://share.garmin.com/{user}/Map/SendMessageToDevices"
