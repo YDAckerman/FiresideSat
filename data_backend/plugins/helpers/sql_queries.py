@@ -45,6 +45,19 @@ class SqlQueries:
     DROP TABLE IF EXISTS trip_points;
     """
 
+    drop_reports_table = """
+    DROP TABLE IF EXISTS incident_reports;
+    """
+
+    create_reports_table = """
+    CREATE TABLE IF NOT EXISTS incident_reports (
+    user_id                integer        NOT NULL,
+    incident_id            varchar(256)   NOT NULL,
+    incident_last_update   bigint         NOT NULL,
+    aqi_last_update        timestamp      NOT NULL,
+    );
+    """
+
     create_user_table = """
     CREATE TABLE IF NOT EXISTS users (
     user_id            serial         PRIMARY KEY,
@@ -76,8 +89,19 @@ class SqlQueries:
     trip_id            integer                  NOT NULL,
     last_location      geometry(Point, 4326)    NOT NULL,
     course             varchar(256),
-    date        timestamp                NOT NULL
+    date               timestamp                NOT NULL
     );
+    """
+
+    insert_incident_reports = """
+    INSERT INTO incident_reports (user_id,
+                                  incident_id,
+                                  incident_last_update,
+                                  aqi_last_update)
+    VALUES (%(user_id)s,
+            %(incident_id)s,
+            %(incident_last_update)s,
+            %(api_laste_update)s);
     """
 
     upsert_trip_points = """
@@ -353,8 +377,8 @@ class SqlQueries:
                        cp.geom::geography) AS dist_m_to_perimeter
     FROM   (SELECT *
             FROM trips
-            WHERE trips.start_date <= TIMESTAMP '2022-09-01'
-            AND   trips.end_date >= TIMESTAMP '2022-09-01'
+            WHERE trips.start_date <= %s
+            AND   trips.end_date >= %s
            ) active_trips
     JOIN   (SELECT t1.last_location,
                    t1.trip_id,
@@ -376,21 +400,22 @@ class SqlQueries:
                     1220000) --meters
     ;
 
-    SELECT ptp.trip_id,
+    CREATE TEMP TABLE user_incidents AS
+    SELECT -- ptp.trip_id,
            ptp.user_id,
-           ci.incident_name,
+           ci.incident_id,
+           ci.date_current AS incident_last_update,
+           ca.aqi_date AS aqi_last_update,
            ci.behavior AS incident_behavior,
-           ci.date_current AS incident_time_last_update,
-           md.dist_m_min AS dist_m_to_perimeter,
+           ci.incident_name,
+           -- md.dist_m_min AS dist_m_to_perimeter,
            ST_X(ST_Transform(ptp.perimeter_geom, 4326)) AS perimeter_lon,
            ST_Y(ST_Transform(ptp.perimeter_geom, 4326)) AS perimeter_lat,
-           ST_Distance(ptp.last_location::geography,
-                       ci.centroid::geography) AS dist_m_to_centroid,
+           -- ST_Distance(ptp.last_location::geography,
+           --            ci.centroid::geography) AS dist_m_to_centroid,
            ST_X(ST_Transform(ci.centroid, 4326)) AS centroid_lon,
            ST_Y(ST_Transform(ci.centroid, 4326)) AS centroid_lat,
            ca.max_aqi,
-           ca.date AS aqi_date_last_update,
-           ca.hour AS aqi_hour_last_update,
            ST_X(ST_Transform(ca.geom, 4326)) AS aqi_obs_lon,
            ST_Y(ST_Transform(ca.geom, 4326)) AS aqi_obs_lat
     FROM points_to_perims ptp
@@ -403,7 +428,10 @@ class SqlQueries:
     AND ptp.dist_m_to_perimeter = md.dist_m_min
     JOIN current_incidents ci ON md.incident_id = ci.incident_id
     JOIN (
-          SELECT c1.incident_id, c1.geom, c1.date, c1.hour, c2.max_aqi
+          SELECT c1.incident_id, c1.geom,
+                 c1.date + ((c1.hour)::varchar(256) || ' hour')::interval
+                 AS aqi_date,
+                 c2.max_aqi
           FROM current_aqi c1
           JOIN (
                 SELECT incident_id, MAX(aqi) AS max_aqi
@@ -414,4 +442,15 @@ class SqlQueries:
     ) ca
     ON md.incident_id = ca.incident_id;
 
+    -- filter out any messages that have already been
+    -- sent to a specific user
+    SELECT ui.*, u.mapshare_id, u.mapshare_pw
+    FROM user_incidents ui JOIN incident_reports ir
+    ON   ui.user_id = ir.user_id
+    AND  ui.incident_id = ir.incident_id
+    AND  ui.incident_time_last_update = ir.incident_last_update
+    AND  ui.aqi_last_update <= (ir.aqi_last_update
+                                    + interval '4 hour')
+    JOIN users u ON ui.user_id = u.user_id
+    WHERE ir.user_id IS NULL;
     """

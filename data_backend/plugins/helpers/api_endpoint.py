@@ -118,4 +118,4 @@ class ApiEndpoint():
 
     _mapshare_feed_endpoint = "{user}?imei={imei}"
 
-    _send_message_endpoint = "https://share.garmin.com/{user}/Map/SendMessageToDevices"
+    _send_message_endpoint = "{user}/Map/SendMessageToDevices"

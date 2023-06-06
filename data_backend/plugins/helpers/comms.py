@@ -1,9 +1,8 @@
-from airflow.hooks.http_hook import HttpHook
+
 from helpers.sql_queries import SqlQueries
 from helpers.api_endpoint import ApiEndpoint
 import json
 import base64
-import requests
 
 # from selenium import webdriver
 # from selenium.webdriver.support.ui import WebDriverWait
@@ -13,16 +12,30 @@ import requests
 
 class Comms():
 
-    def __init__(self):
+    incident_report_columns = ["user_id", "incident_id",
+                               "incident_last_update",
+                               "aqi_last_update",
+                               "incident_behavior",
+                               "incident_name",
+                               "perimeter_lon",
+                               "perimeter_lat",
+                               "centroid_lon",
+                               "centroid_lat",
+                               "aqi_max",
+                               "aqi_obs_lon",
+                               "aqi_obs_lat"]
+
+    def __init__(self, http_hook, pg_hook):
         print("using comms")
         self.sql = SqlQueries()
         self.api = ApiEndpoint()
+        self.http_hook = http_hook
+        self.pg_hook = pg_hook
 
-    def send_messages(self, service_name, message_type, pg_hook, context, log):
+    def send_messages(self, service_name, message_type, context, log):
 
-        http_hook = HttpHook(method='POST', http_conn_id=service_name)
-        pg_conn = pg_hook.get_conn()
-        pg_cur = pg_conn.cursor()
+        pg_conn = self.pg_hook.get_conn()
+        pg_cur = self.pg_conn.cursor()
         current_date = context.get('data_interval_start')
 
         if message_type == "trip_state":
@@ -37,15 +50,15 @@ class Comms():
                 msg = f'{state} incident reports for {usr} ' \
                     + f'for trip dates {start_date} to {end_date}'
 
-                data = self._make_message(device_id, msg)
-                url = self.api.format_endpoint("send_message_endpoint",
-                                               {'mapshare_id': usr})
+                data = self._make_data_obj(device_id, msg)
+                endpoint = self.api.format_endpoint("send_message_endpoint",
+                                                    {'mapshare_id': usr})
                 headers = self.make_headers('', pw)
+
                 try:
-                    # response = http_hook.run(endpoint=endpoint,
-                    #                          headers=headers,
-                    #                          json=data)
-                    response = requests.post(url, auth=('', pw), json=data)
+                    response = self.http_hook.run(endpoint=endpoint,
+                                                  headers=headers,
+                                                  json=data)
                     if json.loads(response.text)["success"]:
                         log.info(f'{state} message successfully '
                                  + f'sent to {usr} at {current_date}')
@@ -57,17 +70,47 @@ class Comms():
 
         elif message_type == "incident_report":
 
+            pg_cur.execute(self.sql.select_user_incidents,
+                           [current_date]*2)
+            records = pg_cur.fetchall()
+
+            for record in records:
+
+                report_info = dict(zip(self.incident_report_columns, record))
+
+                pg_cur.execute(self.sql.insert_incident_reports,
+                               report_info)
+
+            # need to add a filter in sql that removes entries if the user
+            # has been sent a report for a given incident_id, last_update
+            # (user_id, incident_id, last_update, aqi_last_update)
+
             pass
 
         else:
 
             raise ValueError("Unrecognized message type")
 
+        pg_conn.commit()
+        pg_conn.close()
+
     @staticmethod
-    def _make_message(device_id, msg):
+    def _make_data_obj(device_id, msg):
         return {'deviceIds': device_id,
                 'fromAddr': 'noreply@firesidesat.com',
                 'messageText': msg}
+
+    @staticmethod
+    def _make_incident_report(record):
+        msg = 'Incident Name: {incident_name} ' \
+            + 'Last Update: {incident_last_update} ' \
+            + 'Incident Behavior: {incident_behavior} ' \
+            + 'Centroid (lon,lat): ({centroid_lon},{centroid_lat} ' \
+            + 'Nearest Point (lon,lat): ({perimeter_lon},{perimeter_lat}) ' \
+            + 'Max AQI: {max_aqi} ' \
+            + 'AQI Location (lon, lat): ({aqi_obs_lon}, {aqi_obs_lat})'
+
+        return msg.format(record)
 
     @staticmethod
     def make_headers(usr, pw):
