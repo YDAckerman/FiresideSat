@@ -47,15 +47,29 @@ class SqlQueries:
 
     drop_reports_table = """
     DROP TABLE IF EXISTS incident_reports;
+    DROP TABLE IF EXISTS trip_state_reports;
     """
 
-    create_reports_table = """
+    create_reports_tables = """
     CREATE TABLE IF NOT EXISTS incident_reports (
     user_id                integer        NOT NULL,
     incident_id            varchar(256)   NOT NULL,
     incident_last_update   bigint         NOT NULL,
     aqi_last_update        timestamp      NOT NULL,
     );
+
+    CREATE TABLE IF NOT EXISTS trip_state_reports (
+    user_id   integer    NOT NULL,
+    trip_id   integer    NOT NULL,
+    state     varchar    NOT NULL,
+    date_sent timestamp  NOT NULL
+    );
+    """
+
+    insert_trip_state_report = """
+    INSERT INTO trip_state_reports (user_id, trip_id,
+                                    state, date_sent)
+    VALUES (%(user_id)s, %(trip_id)s, %(state)s, %(date_sent)s);
     """
 
     create_user_table = """
@@ -93,7 +107,7 @@ class SqlQueries:
     );
     """
 
-    insert_incident_reports = """
+    insert_incident_report = """
     INSERT INTO incident_reports (user_id,
                                   incident_id,
                                   incident_last_update,
@@ -101,7 +115,7 @@ class SqlQueries:
     VALUES (%(user_id)s,
             %(incident_id)s,
             %(incident_last_update)s,
-            %(api_laste_update)s);
+            %(api_last_update)s);
     """
 
     upsert_trip_points = """
@@ -338,17 +352,20 @@ class SqlQueries:
     """
 
     select_state_change_users = """
-    SELECT users.mapshare_id, users.mapshare_pw,
-           trips.start_date, trips.end_date,
+    SELECT users.user_id, users.mapshare_id, users.mapshare_pw,
+           trips.trip_id, trips.start_date, trips.end_date,
            devices.garmin_device_id,
-           CASE WHEN trips.start_date::date = (%s)::date THEN 'Starting'
-                ELSE 'Stopping' END
-           AS state
+           CASE WHEN trips.start_date::date = (%(current_date)s)::date
+                THEN 'Starting'::varchar(256)
+                ELSE 'Stopping'::varchar(256)
+           END
+           AS state,
+           (%(current_date)s)::date AS date_sent
     FROM   users
     JOIN   trips ON users.user_id = trips.user_id
     JOIN   devices ON trips.device_id = devices.device_id
-    WHERE  trips.start_date::date = (%s)::date
-    OR     trips.end_date::date = (%s)::date;
+    WHERE  trips.start_date::date = (%(current_date)s)::date
+    OR     trips.end_date::date = (%(current_date)s)::date;
     """
 
     select_active_users = """
@@ -377,8 +394,8 @@ class SqlQueries:
                        cp.geom::geography) AS dist_m_to_perimeter
     FROM   (SELECT *
             FROM trips
-            WHERE trips.start_date <= %s
-            AND   trips.end_date >= %s
+            WHERE trips.start_date <= %(current_date)s
+            AND   trips.end_date >= %(current_date)s
            ) active_trips
     JOIN   (SELECT t1.last_location,
                    t1.trip_id,
@@ -444,7 +461,7 @@ class SqlQueries:
 
     -- filter out any messages that have already been
     -- sent to a specific user
-    SELECT ui.*, u.mapshare_id, u.mapshare_pw
+    SELECT ui.*, u.mapshare_id, u.mapshare_pw, d.garmin_device_id
     FROM user_incidents ui JOIN incident_reports ir
     ON   ui.user_id = ir.user_id
     AND  ui.incident_id = ir.incident_id
@@ -452,5 +469,6 @@ class SqlQueries:
     AND  ui.aqi_last_update <= (ir.aqi_last_update
                                     + interval '4 hour')
     JOIN users u ON ui.user_id = u.user_id
+    JOIN devices d ON ui.user_id = d.user_id
     WHERE ir.user_id IS NULL;
     """

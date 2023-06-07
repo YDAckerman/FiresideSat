@@ -1,4 +1,11 @@
 from airflow.models import Variable
+import base64
+
+
+def make_headers(usr, pw):
+    usr_pw = f'{usr}:{pw}'
+    b64_val = base64.b64encode(usr_pw.encode()).decode()
+    return {"Authorization": "Basic %s" % b64_val}
 
 
 class ApiEndpoint():

@@ -1,8 +1,7 @@
-
 from helpers.sql_queries import SqlQueries
-from helpers.api_endpoint import ApiEndpoint
+from helpers.reports import trip_state_reporter, incident_reporter
 import json
-import base64
+
 
 # from selenium import webdriver
 # from selenium.webdriver.support.ui import WebDriverWait
@@ -12,27 +11,16 @@ import base64
 
 class Comms():
 
-    incident_report_columns = ["user_id", "incident_id",
-                               "incident_last_update",
-                               "aqi_last_update",
-                               "incident_behavior",
-                               "incident_name",
-                               "perimeter_lon",
-                               "perimeter_lat",
-                               "centroid_lon",
-                               "centroid_lat",
-                               "aqi_max",
-                               "aqi_obs_lon",
-                               "aqi_obs_lat"]
+    failure_message = "{message_type} message failed to send " \
+        + "to {user_id} on {current_date}"
 
     def __init__(self, http_hook, pg_hook):
         print("using comms")
         self.sql = SqlQueries()
-        self.api = ApiEndpoint()
         self.http_hook = http_hook
         self.pg_hook = pg_hook
 
-    def send_messages(self, service_name, message_type, context, log):
+    def send_messages(self, message_type, context, log):
 
         pg_conn = self.pg_hook.get_conn()
         pg_cur = self.pg_conn.cursor()
@@ -41,82 +29,42 @@ class Comms():
         if message_type == "trip_state":
 
             pg_cur.execute(self.sql.select_state_change_users,
-                           [current_date]*3)
+                           {'current_date': current_date})
             records = pg_cur.fetchall()
-
-            for record in records:
-
-                usr, pw, start_date, end_date, device_id, state = record
-                msg = f'{state} incident reports for {usr} ' \
-                    + f'for trip dates {start_date} to {end_date}'
-
-                data = self._make_data_obj(device_id, msg)
-                endpoint = self.api.format_endpoint("send_message_endpoint",
-                                                    {'mapshare_id': usr})
-                headers = self.make_headers('', pw)
-
-                try:
-                    response = self.http_hook.run(endpoint=endpoint,
-                                                  headers=headers,
-                                                  json=data)
-                    if json.loads(response.text)["success"]:
-                        log.info(f'{state} message successfully '
-                                 + f'sent to {usr} at {current_date}')
-                    else:
-                        log.info(f'There was an error sending {state} message'
-                                 + f'to {usr} at {current_date}')
-                except Exception as e:
-                    log.info(e)
+            report_maker = trip_state_reporter()
+            record_sql = self.sql.insert_trip_state_report
 
         elif message_type == "incident_report":
 
             pg_cur.execute(self.sql.select_user_incidents,
-                           [current_date]*2)
+                           {'current_date': current_date})
             records = pg_cur.fetchall()
-
-            for record in records:
-
-                report_info = dict(zip(self.incident_report_columns, record))
-
-                pg_cur.execute(self.sql.insert_incident_reports,
-                               report_info)
-
-            # need to add a filter in sql that removes entries if the user
-            # has been sent a report for a given incident_id, last_update
-            # (user_id, incident_id, last_update, aqi_last_update)
-
-            pass
+            report_maker = incident_reporter()
+            record_sql = self.sql.insert_incident_report
 
         else:
 
             raise ValueError("Unrecognized message type")
 
+        for record in records:
+
+            report = report_maker(record)
+            http_resp = report.send(self.http_hook, log)
+
+            if not json.loads(http_resp.text)["success"]:
+
+                log.info(self.
+                         failure_message.
+                         format(message_type=message_type,
+                                user_id=report.get_recipient(),
+                                current_date=current_date))
+
+            else:
+
+                report.record(pg_cur, record_sql)
+
         pg_conn.commit()
         pg_conn.close()
-
-    @staticmethod
-    def _make_data_obj(device_id, msg):
-        return {'deviceIds': device_id,
-                'fromAddr': 'noreply@firesidesat.com',
-                'messageText': msg}
-
-    @staticmethod
-    def _make_incident_report(record):
-        msg = 'Incident Name: {incident_name} ' \
-            + 'Last Update: {incident_last_update} ' \
-            + 'Incident Behavior: {incident_behavior} ' \
-            + 'Centroid (lon,lat): ({centroid_lon},{centroid_lat} ' \
-            + 'Nearest Point (lon,lat): ({perimeter_lon},{perimeter_lat}) ' \
-            + 'Max AQI: {max_aqi} ' \
-            + 'AQI Location (lon, lat): ({aqi_obs_lon}, {aqi_obs_lat})'
-
-        return msg.format(record)
-
-    @staticmethod
-    def make_headers(usr, pw):
-        usr_pw = f'{usr}:{pw}'
-        b64_val = base64.b64encode(usr_pw.encode()).decode()
-        return {"Authorization": "Basic %s" % b64_val}
 
     # @staticmethod
     # def _get_user_messages(usr, pw, log):

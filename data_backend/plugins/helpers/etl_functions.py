@@ -1,5 +1,5 @@
 from helpers.sql_queries import SqlQueries
-from helpers.api_endpoint import ApiEndpoint
+from helpers.api_endpoint import ApiEndpoint, make_headers
 from helpers.comms import Comms
 from pykml import parser
 from datetime import datetime
@@ -102,7 +102,7 @@ class EtlFunctions():
                                  {"mapshare_id": mapshare_id,
                                   "garmin_imei": garmin_imei}) \
 
-            headers = self.comms.make_headers(mapshare_id, mapshare_pw)
+            headers = make_headers(mapshare_id, mapshare_pw)
 
             api_response = http_hook.run(endpoint=endpoint,
                                          headers=headers)
