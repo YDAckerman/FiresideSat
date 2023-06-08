@@ -5,6 +5,8 @@ from airflow.operators.postgres_operator import PostgresOperator
 # from airflow.operators.python_operator import PythonOperator
 from helpers.sql_queries import SqlQueries
 
+sql = SqlQueries()
+
 # ##############################################
 #  default arguments
 # ##############################################
@@ -40,42 +42,56 @@ drop_current_tables = PostgresOperator(
     task_id="drop_current_tables",
     dag=dag,
     postgres_conn_id="fireside",
-    sql=SqlQueries.drop_current_tables
+    sql=sql.drop_current_tables
 )
 
 create_current_tables = PostgresOperator(
     task_id="create_current_tables",
     dag=dag,
     postgres_conn_id="fireside",
-    sql=SqlQueries.create_current_tables
+    sql=sql.create_current_tables
 )
 
 drop_user_table = PostgresOperator(
     task_id="drop_user_table",
     dag=dag,
     postgres_conn_id="fireside",
-    sql=SqlQueries.drop_user_table
+    sql=sql.drop_user_table
 )
 
 create_user_table = PostgresOperator(
     task_id="create_user_table",
     dag=dag,
     postgres_conn_id="fireside",
-    sql=SqlQueries.create_user_table
+    sql=sql.create_user_table
 )
 
 drop_trip_tables = PostgresOperator(
     task_id="drop_trip_table",
     dag=dag,
     postgres_conn_id="fireside",
-    sql=SqlQueries.drop_trip_tables
+    sql=sql.drop_trip_tables
 )
 
 create_trip_tables = PostgresOperator(
     task_id="create_trip_table",
     dag=dag,
     postgres_conn_id="fireside",
-    sql=SqlQueries.create_trip_tables
+    sql=sql.create_trip_tables
+)
+
+drop_report_tables = PostgresOperator(
+    task_id="drop_report_tables",
+    dag=dag,
+    postgres_conn_id="fireside",
+    sql=sql.drop_report_tables
+)
+
+create_report_tables = PostgresOperator(
+    task_id="create_report_tables",
+    dag=dag,
+    postgres_conn_id="fireside",
+    sql=sql.create_report_tables
 )
 
 end_operator = DummyOperator(task_id='Stop_execution', dag=dag)
@@ -105,3 +121,10 @@ start_operator >> drop_trip_tables
 drop_trip_tables >> create_trip_tables
 
 create_trip_tables >> end_operator
+
+# report tables
+start_operator >> drop_report_tables
+
+drop_report_tables >> create_report_tables
+
+create_report_tables >> end_operator

@@ -19,8 +19,8 @@ default_args = {
 # ##############################################
 
 dag = DAG('trip_state_message_dag',
-          start_date=datetime(2021, 4, 1),
-          end_date=datetime(2021, 4, 2),
+          start_date=datetime(2021, 5, 2),
+          end_date=datetime(2021, 5, 2),
           default_args=default_args,
           description='Send trip start/stop messages',
           schedule="@daily",

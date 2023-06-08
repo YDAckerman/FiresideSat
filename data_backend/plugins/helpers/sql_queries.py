@@ -1,4 +1,6 @@
 
+# TODO: varchar(256) is often unecessarily large
+
 class SqlQueries:
 
     def __init__(self, test=False):
@@ -38,6 +40,7 @@ class SqlQueries:
     drop_user_table = """
     DROP TABLE IF EXISTS users;
     DROP TABLE IF EXISTS devices;
+    DROP TABLE IF EXISTS user_settings;
     """
 
     drop_trip_tables = """
@@ -45,12 +48,12 @@ class SqlQueries:
     DROP TABLE IF EXISTS trip_points;
     """
 
-    drop_reports_table = """
+    drop_report_tables = """
     DROP TABLE IF EXISTS incident_reports;
     DROP TABLE IF EXISTS trip_state_reports;
     """
 
-    create_reports_tables = """
+    create_report_tables = """
     CREATE TABLE IF NOT EXISTS incident_reports (
     user_id                integer        NOT NULL,
     incident_id            varchar(256)   NOT NULL,
@@ -87,6 +90,11 @@ class SqlQueries:
     garmin_imei        varchar(256),
     garmin_device_id   varchar(256)
     );
+
+    CREATE TABLE IF NOT EXISTS user_settings (
+    user_id            integer        NOT NULL,
+    setting_name       varchar(256)   NOT NULL,
+    setting_value      varchar(256)   NOT NULL
     """
 
     create_trip_tables = """
@@ -137,7 +145,7 @@ class SqlQueries:
     last_location geometry(Point, 4326) GENERATED ALWAYS AS (
          ST_SetSRID(ST_MakePoint(raw_lon, raw_lat), 4326)) STORED,
     course             varchar(256),
-    date        timestamp      NOT NULL
+    date               timestamp      NOT NULL
     );
     """
 
@@ -314,7 +322,7 @@ class SqlQueries:
     FROM current_bounding_boxes;
     """
 
-    select_centroids = """
+    select_fire_centroids = """
     SELECT incident_id,
            ST_X(centroid) as lon,
            ST_Y(centroid) as lat
@@ -374,8 +382,8 @@ class SqlQueries:
     FROM   users
     JOIN   trips ON users.user_id = trips.user_id
     JOIN   devices ON trips.device_id = devices.device_id
-    WHERE  trips.start_date <= %s
-    AND    trips.end_date >= %s;
+    WHERE  trips.start_date <= %(current_date)s
+    AND    trips.end_date >= %(current_date)s;
     """
 
     # add a check that last_update is within trip range
@@ -383,19 +391,20 @@ class SqlQueries:
     # NOTE: THE DATE BOUNDS NEED TO BE CHANGED!!!
     select_user_incidents = """
 
+    DROP TABLE IF EXISTS points_to_perims;
     CREATE TEMP TABLE points_to_perims AS
     SELECT active_trips.trip_id,
            active_trips.user_id,
+           cp.incident_id,
            latest_points.last_location,
            latest_points.last_update,
-           cp.incident_id,
            cp.geom AS perimeter_geom,
            ST_Distance(latest_points.last_location::geography,
                        cp.geom::geography) AS dist_m_to_perimeter
     FROM   (SELECT *
             FROM trips
-            WHERE trips.start_date <= %(current_date)s
-            AND   trips.end_date >= %(current_date)s
+            WHERE trips.start_date <= '2021-04-01'::timestamp -- %(current_date)s
+            AND   trips.end_date >= '2021-04-01'::timestamp -- %(current_date)s
            ) active_trips
     JOIN   (SELECT t1.last_location,
                    t1.trip_id,
@@ -409,13 +418,15 @@ class SqlQueries:
             AND t1.date = t2.last_update
            ) latest_points
     ON   active_trips.trip_id = latest_points.trip_id
-    AND  latest_points.last_update >= active_trips.start_date
-    AND  latest_points.last_update <= active_trips.end_date
+    -- these are here because of some testing points
+    -- they are redundant otherwise.
+    -- AND  latest_points.last_update >= active_trips.start_date
+    -- AND  latest_points.last_update <= active_trips.end_date
     JOIN current_perimeters cp
     ON   ST_DWithin(latest_points.last_location::geography,
                     cp.geom::geography,
-                    1220000) --meters
-    ;
+                    1220000 -- %(max_distance_m)s --meters
+    );
 
     CREATE TEMP TABLE user_incidents AS
     SELECT -- ptp.trip_id,
@@ -437,11 +448,15 @@ class SqlQueries:
            ST_Y(ST_Transform(ca.geom, 4326)) AS aqi_obs_lat
     FROM points_to_perims ptp
     JOIN (SELECT incident_id,
+                 user_id,
+                 trip_id,
                  MIN(dist_m_to_perimeter) AS dist_m_min
           FROM points_to_perims
-          GROUP BY incident_id
+          GROUP BY incident_id, user_id, trip_id
           ) md
-    ON ptp.incident_id = md.incident_id
+    ON  ptp.incident_id = md.incident_id
+    AND ptp.user_id = md.user_id
+    AND ptp.trip_id = md.trip_id
     AND ptp.dist_m_to_perimeter = md.dist_m_min
     JOIN current_incidents ci ON md.incident_id = ci.incident_id
     JOIN (

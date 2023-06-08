@@ -37,7 +37,8 @@ class Comms():
         elif message_type == "incident_report":
 
             pg_cur.execute(self.sql.select_user_incidents,
-                           {'current_date': current_date})
+                           {'current_date': current_date,
+                            'max_distance_m': 1220000})
             records = pg_cur.fetchall()
             report_maker = incident_reporter()
             record_sql = self.sql.insert_incident_report

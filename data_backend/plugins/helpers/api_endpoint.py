@@ -13,52 +13,43 @@ class ApiEndpoint():
     def __init__(self):
         print("using api endpoint")
 
-    def format_endpoint(self, endpoint_name, context=None):
+    def format_endpoint(self, endpoint_name, context):
+
+        if context is None:
+            raise ValueError("Endpoints require context data")
 
         if endpoint_name == "wildfire_endpoint":
 
-            if context is None:
-                raise ValueError("This endpoint requires context data")
-            else:
-                return self._format_wildfire_endpoint(context)
+            return self._format_wildfire_endpoint(context)
 
         elif endpoint_name == "airnow_endpoint":
 
-            if context is None:
-                raise ValueError("This endpoint requires context data")
-            else:
-
-                api_key = Variable.get("airnow_api_key")
-                return self._format_airnow_endpoint(context.get('lat'),
-                                                    context.get('lon'),
-                                                    api_key)
+            api_key = Variable.get("airnow_api_key")
+            return self._format_airnow_endpoint(context.get('lat'),
+                                                context.get('lon'),
+                                                context.get('dist_miles'),
+                                                api_key)
 
         elif endpoint_name == "mapshare_feed_endpoint":
 
-            if context is None:
-                raise ValueError("This endpoint requires context data")
-            else:
-                return self._mapshare_feed_endpoint \
-                           .format(user=context.get("mapshare_id"),
-                                   imei=context.get("garmin_imei"))
+            return self._mapshare_feed_endpoint \
+                       .format(user=context.get("mapshare_id"),
+                               imei=context.get("garmin_imei"))
 
         elif endpoint_name == "send_message_endpoint":
 
-            if context is None:
-                raise ValueError("This endpoint requires context data")
-            else:
-                return self._send_message_endpoint \
-                           .format(user=context.get("mapshare_id"))
+            return self._send_message_endpoint \
+                       .format(user=context.get("mapshare_id"))
 
         else:
 
             raise ValueError("Unrecognized enpoint")
 
-    def _format_airnow_endpoint(self, lat, lon, api_key):
+    def _format_airnow_endpoint(self, lat, lon, radius_miles, api_key):
 
         return self \
             ._airnow_radius_endpoint \
-            .format(lat=lat, lon=lon, key=api_key)
+            .format(lat=lat, lon=lon, radius_miles=radius_miles, key=api_key)
 
     def _format_wildfire_endpoint(self, context):
 
@@ -87,7 +78,7 @@ class ApiEndpoint():
     _airnow_radius_endpoint = "?format=application/json" \
         + "&latitude={lat}" \
         + "&longitude={lon}" \
-        + "&distance=150" \
+        + "&distance={radius_miles}" \
         + "&API_KEY={key}"
 
     _active_wildfire_incidents_url = "https://services3.arcgis.com/" \

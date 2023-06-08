@@ -1,6 +1,5 @@
 from helpers.sql_queries import SqlQueries
 from helpers.api_endpoint import ApiEndpoint, make_headers
-from helpers.comms import Comms
 from pykml import parser
 from datetime import datetime
 import psycopg2.extras
@@ -13,7 +12,6 @@ class EtlFunctions():
         print("using etl functions")
         self.sql = SqlQueries()
         self.api = ApiEndpoint()
-        self.comms = Comms()
 
     def load_from_endpoint(self,
                            endpoint, http_hook, pg_hook, context, log):
@@ -86,7 +84,7 @@ class EtlFunctions():
         current_date = context.get('data_interval_start')
 
         pg_cur.execute(self.sql.select_active_users,
-                       [current_date]*2)
+                       {'current_date': current_date})
 
         records = pg_cur.fetchall()
 
@@ -123,12 +121,13 @@ class EtlFunctions():
     def _load_from_airnow_endpoint(self,
                                    http_hook, pg_conn, pg_cur, context, log):
 
-        pg_cur.execute(self.sql.select_centroids)
+        pg_cur.execute(self.sql.select_fire_centroids)
         records = pg_cur.fetchall()
 
         for record in records:
 
-            # TODO: Need to catch errors here
+            # TODO: DIST _should_ change depending on the fire (record)
+            AQI_RADIUS_MILES = 35
             incident_id, lon, lat = record
 
             log.info("Inserting aqi staging data for incident: "
@@ -136,7 +135,9 @@ class EtlFunctions():
 
             endpoint = self.api \
                 .format_endpoint("airnow_endpoint",
-                                 {'lat': lat, 'lon': lon})
+                                 {'lat': lat,
+                                  'lon': lon,
+                                  'radius_miles': AQI_RADIUS_MILES})
 
             api_response = http_hook.run(endpoint=endpoint)
             response = json.loads(api_response.text)
@@ -214,15 +215,9 @@ class EtlFunctions():
                                              '%Y-%m-%dT%H:%M:%SZ')
 
         coords = str(root.Document.Folder.Placemark.Point.coordinates)
-        # device_id = str(root.Document
-        #                 .Folder
-        #                 .Placemark.ExtendedData
-        #                 .Data[17].value)
         course = str(root.Document
                      .Folder
                      .Placemark.ExtendedData
                      .Data[12].value)
 
-        return [time_point_added, *coords.split(",")[0:2],
-                ## device_id,
-                course]
+        return [time_point_added, *coords.split(",")[0:2], course]

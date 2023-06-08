@@ -8,20 +8,20 @@ class Report:
         self.report_data = self._make_report_data(record, record_cols)
         self.message = self.format_template(message_template)
 
-    def format_template(self, template):
-        return template.format(**self.report_data)
-
-    def get_recipient(self):
-        return self.report_data['user_id']
-
     def send(self, http_hook, log):
         try:
-            return http_hook.run(**self._get_post_parameters)
+            return http_hook.run(**self._make_parameters())
         except Exception as e:
             log.info(e)
 
     def record(self, pg_cur, sql):
         pg_cur.execute(sql, self.report_data)
+
+    def format_template(self, template):
+        return template.format(**self.report_data)
+
+    def get_recipient(self):
+        return self.report_data['user_id']
 
     def _make_report_data(self, record, record_cols):
 
@@ -39,27 +39,28 @@ class Report:
 
         return report_data
 
-    def _get_post_endpoint(self):
+    def _make_endpoint(self):
+
         return ApiEndpoint().format_endpoint(
             "send_message_endpoint",
             {'mapshare_id': self.report_data['mapshare_id']}
         )
 
-    def _get_post_headers(self):
+    def _make_headers(self):
         return make_headers('', self.report_data['mapshare_pw'])
 
-    def _get_post_json(self):
+    def _make_json(self):
         return {
             'deviceIds': self.report_data['device_id'],
             'fromAdd': 'noreply@firesidesat.com',
             'messageText': self.message
         }
 
-    def _get_post_parameters(self):
+    def _make_parameters(self):
         return {
-            'json': self._get_post_json(),
-            'endpoint': self._get_post_endpoint(),
-            'headers': self._get_post_headers()
+            'json': self._make_json(),
+            'endpoint': self._make_endpoint(),
+            'headers': self._make_headers()
         }
 
 
