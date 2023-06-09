@@ -14,7 +14,7 @@ class Report:
         except Exception as e:
             log.info(e)
 
-    def record(self, pg_cur, sql):
+    def mark_sent(self, pg_cur, sql):
         pg_cur.execute(sql, self.report_data)
 
     def format_template(self, template):
@@ -64,54 +64,52 @@ class Report:
         }
 
 
-def trip_state_reporter():
+class ReportFactory():
 
-    columns = ["user_id",
-               "mapshare_id",
-               "mapshare_pw",
-               "start_date",
-               "end_date",
-               "device_id",
-               "state",
-               "date_sent"]
+    reports_dict = {
 
-    message_template = '{state} incident reports ' \
-        + 'for trip dates {start_date} to {end_date}'
+        "trip_state_report": {
+            'columns': ["user_id",
+                        "mapshare_id",
+                        "mapshare_pw",
+                        "start_date",
+                        "end_date",
+                        "device_id",
+                        "state",
+                        "date_sent"],
+            'message_template': '{state} incident reports '
+            + 'for trip dates {start_date} to {end_date}'
+        },
 
-    def make_trip_state_report(record):
-        return Report(record, columns, message_template)
+        'incident_report': {
+            'columns': ["user_id", "incident_id",
+                        "incident_last_update",
+                        "aqi_last_update",
+                        "incident_behavior",
+                        "incident_name",
+                        "perimeter_lon",
+                        "perimeter_lat",
+                        "centroid_lon",
+                        "centroid_lat",
+                        "aqi_max",
+                        "aqi_obs_lon",
+                        "aqi_obs_lat",
+                        "mapshare_id",
+                        "mapshare_pw",
+                        "garmin_device_id"],
+            'message_template': 'Incident Name: {incident_name} '
+            + 'Last Update: {incident_last_update} |'
+            + 'Incident Behavior: {incident_behavior} |'
+            + 'Centroid (lon,lat): ({centroid_lon},{centroid_lat} |'
+            + 'Nearest Point (lon,lat): '
+            + '({perimeter_lon},{perimeter_lat}) |'
+            + 'Max AQI: {max_aqi} |'
+            + 'AQI Location (lon, lat): ({aqi_obs_lon}, {aqi_obs_lat})'
+        }
+    }
 
-    return trip_state_reporter
+    def __init__(self, report_type):
+        self.report_metadata = self.reports_dict[report_type]
 
-
-def incident_reporter():
-
-    columns = ["user_id", "incident_id",
-               "incident_last_update",
-               "aqi_last_update",
-               "incident_behavior",
-               "incident_name",
-               "perimeter_lon",
-               "perimeter_lat",
-               "centroid_lon",
-               "centroid_lat",
-               "aqi_max",
-               "aqi_obs_lon",
-               "aqi_obs_lat",
-               "mapshare_id",
-               "mapshare_pw",
-               "garmin_device_id"]
-
-    message_template = 'Incident Name: {incident_name} ' \
-        + 'Last Update: {incident_last_update} |' \
-        + 'Incident Behavior: {incident_behavior} |' \
-        + 'Centroid (lon,lat): ({centroid_lon},{centroid_lat} |' \
-        + 'Nearest Point (lon,lat): ' \
-        + '({perimeter_lon},{perimeter_lat}) |' \
-        + 'Max AQI: {max_aqi} |' \
-        + 'AQI Location (lon, lat): ({aqi_obs_lon}, {aqi_obs_lat})'
-
-    def make_incident_report(record):
-        return Report(record, columns, message_template)
-
-    return make_incident_report
+    def generate_from(self, record):
+        return Report(record, **self.report_metadata)

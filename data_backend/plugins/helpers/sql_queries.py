@@ -403,8 +403,8 @@ class SqlQueries:
                        cp.geom::geography) AS dist_m_to_perimeter
     FROM   (SELECT *
             FROM trips
-            WHERE trips.start_date <= '2021-04-01'::timestamp -- %(current_date)s
-            AND   trips.end_date >= '2021-04-01'::timestamp -- %(current_date)s
+            WHERE trips.start_date <= %(current_date)s
+            AND   trips.end_date >= %(current_date)s
            ) active_trips
     JOIN   (SELECT t1.last_location,
                    t1.trip_id,
@@ -425,14 +425,15 @@ class SqlQueries:
     JOIN current_perimeters cp
     ON   ST_DWithin(latest_points.last_location::geography,
                     cp.geom::geography,
-                    1220000 -- %(max_distance_m)s --meters
+                    %(max_distance_m)s --meters
     );
 
+    DROP TABLE IF EXISTS user_incidents;
     CREATE TEMP TABLE user_incidents AS
     SELECT -- ptp.trip_id,
            ptp.user_id,
            ci.incident_id,
-           ci.date_current AS incident_last_update,
+           to_timestamp(ci.date_current / 1000) AS incident_last_update,
            ca.aqi_date AS aqi_last_update,
            ci.behavior AS incident_behavior,
            ci.incident_name,

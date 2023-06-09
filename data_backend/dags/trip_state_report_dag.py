@@ -36,7 +36,7 @@ send_msgs_operator = SendMessagesOperator(
     task_id="send_trip_state_messages",
     postgres_conn_id='fireside',
     http_conn_id='garmin_share',
-    message_type='trip_state'
+    message_type='trip_state_report'
 )
 
 end_operator = DummyOperator(task_id='Stop_execution', dag=dag)

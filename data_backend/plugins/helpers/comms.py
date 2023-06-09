@@ -1,5 +1,5 @@
 from helpers.sql_queries import SqlQueries
-from helpers.reports import trip_state_reporter, incident_reporter
+from helpers.reports import ReportFactory
 import json
 
 
@@ -26,13 +26,14 @@ class Comms():
         pg_cur = self.pg_conn.cursor()
         current_date = context.get('data_interval_start')
 
-        if message_type == "trip_state":
+        report_factory = ReportFactory(message_type)
+
+        if message_type == "trip_state_report":
 
             pg_cur.execute(self.sql.select_state_change_users,
                            {'current_date': current_date})
             records = pg_cur.fetchall()
-            report_maker = trip_state_reporter()
-            record_sql = self.sql.insert_trip_state_report
+            mark_sent_sql = self.sql.insert_trip_state_report
 
         elif message_type == "incident_report":
 
@@ -40,29 +41,25 @@ class Comms():
                            {'current_date': current_date,
                             'max_distance_m': 1220000})
             records = pg_cur.fetchall()
-            report_maker = incident_reporter()
-            record_sql = self.sql.insert_incident_report
-
-        else:
-
-            raise ValueError("Unrecognized message type")
+            mark_sent_sql = self.sql.insert_incident_report
 
         for record in records:
 
-            report = report_maker(record)
+            report = report_factory.generate_from(record)
             http_resp = report.send(self.http_hook, log)
+            post_successful = json.loads(http_resp.text)["success"]
 
-            if not json.loads(http_resp.text)["success"]:
+            if not post_successful:
 
-                log.info(self.
-                         failure_message.
-                         format(message_type=message_type,
-                                user_id=report.get_recipient(),
-                                current_date=current_date))
+                log.info(self
+                         .failure_message
+                         .format(message_type=message_type,
+                                 user_id=report.get_recipient(),
+                                 current_date=current_date))
 
             else:
 
-                report.record(pg_cur, record_sql)
+                report.mark_sent(pg_cur, mark_sent_sql)
 
         pg_conn.commit()
         pg_conn.close()
