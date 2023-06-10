@@ -1,4 +1,3 @@
-from helpers.sql_queries import SqlQueries
 from helpers.reports import ReportFactory
 import json
 
@@ -11,57 +10,40 @@ import json
 
 class Comms():
 
-    failure_message = "{message_type} message failed to send " \
-        + "to {user_id} on {current_date}"
-
     def __init__(self, http_hook, pg_hook):
         print("using comms")
-        self.sql = SqlQueries()
         self.http_hook = http_hook
         self.pg_hook = pg_hook
 
-    def send_messages(self, message_type, context, log):
+    def send_messages(self, report_type, context, log):
 
         pg_conn = self.pg_hook.get_conn()
-        pg_cur = self.pg_conn.cursor()
+        pg_cur = pg_conn.cursor()
+
         current_date = context.get('data_interval_start')
 
-        report_factory = ReportFactory(message_type)
+        report_factory = ReportFactory(report_type, current_date)
 
-        if message_type == "trip_state_report":
+        pg_cur.execute(report_factory.get_records_sql(),
+                       {'current_date': current_date,
+                        'max_distance_m': 1220000})
 
-            pg_cur.execute(self.sql.select_state_change_users,
-                           {'current_date': current_date})
-            records = pg_cur.fetchall()
-            mark_sent_sql = self.sql.insert_trip_state_report
+        report_records = pg_cur.fetchall()
+        for record in report_records:
 
-        elif message_type == "incident_report":
-
-            pg_cur.execute(self.sql.select_user_incidents,
-                           {'current_date': current_date,
-                            'max_distance_m': 1220000})
-            records = pg_cur.fetchall()
-            mark_sent_sql = self.sql.insert_incident_report
-
-        for record in records:
-
-            report = report_factory.generate_from(record)
+            report = report_factory.make_report(record)
             http_resp = report.send(self.http_hook, log)
-            post_successful = json.loads(http_resp.text)["success"]
 
-            if not post_successful:
+            if http_resp and json.loads(http_resp.text)['success']:
 
-                log.info(self
-                         .failure_message
-                         .format(message_type=message_type,
-                                 user_id=report.get_recipient(),
-                                 current_date=current_date))
+                report.save(pg_cur, report_factory.get_save_sql())
 
             else:
 
-                report.mark_sent(pg_cur, mark_sent_sql)
+                log.info(report_factory.get_failure_message())
 
-        pg_conn.commit()
+            pg_conn.commit()
+
         pg_conn.close()
 
     # @staticmethod
@@ -101,3 +83,6 @@ class Comms():
     #         return [(None, None)]
 
     #     return zip(message_dates, message_contents)
+
+
+    

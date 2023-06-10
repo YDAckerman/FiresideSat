@@ -57,8 +57,8 @@ class SqlQueries:
     CREATE TABLE IF NOT EXISTS incident_reports (
     user_id                integer        NOT NULL,
     incident_id            varchar(256)   NOT NULL,
-    incident_last_update   bigint         NOT NULL,
-    aqi_last_update        timestamp      NOT NULL,
+    incident_last_update   timestamp         NOT NULL,
+    aqi_last_update        timestamp      NOT NULL
     );
 
     CREATE TABLE IF NOT EXISTS trip_state_reports (
@@ -123,7 +123,7 @@ class SqlQueries:
     VALUES (%(user_id)s,
             %(incident_id)s,
             %(incident_last_update)s,
-            %(api_last_update)s);
+            %(aqi_last_update)s);
     """
 
     upsert_trip_points = """
@@ -372,6 +372,8 @@ class SqlQueries:
     FROM   users
     JOIN   trips ON users.user_id = trips.user_id
     JOIN   devices ON trips.device_id = devices.device_id
+    JOIN   trip_state_reports tsr ON users.user_id = tsr.user_id
+    AND    trip_id = tsr.trip_id
     WHERE  trips.start_date::date = (%(current_date)s)::date
     OR     trips.end_date::date = (%(current_date)s)::date;
     """
@@ -420,8 +422,8 @@ class SqlQueries:
     ON   active_trips.trip_id = latest_points.trip_id
     -- these are here because of some testing points
     -- they are redundant otherwise.
-    -- AND  latest_points.last_update >= active_trips.start_date
-    -- AND  latest_points.last_update <= active_trips.end_date
+    AND  latest_points.last_update >= active_trips.start_date
+    AND  latest_points.last_update <= active_trips.end_date
     JOIN current_perimeters cp
     ON   ST_DWithin(latest_points.last_location::geography,
                     cp.geom::geography,
@@ -478,13 +480,16 @@ class SqlQueries:
     -- filter out any messages that have already been
     -- sent to a specific user
     SELECT ui.*, u.mapshare_id, u.mapshare_pw, d.garmin_device_id
-    FROM user_incidents ui JOIN incident_reports ir
-    ON   ui.user_id = ir.user_id
+    FROM user_incidents ui
+    LEFT JOIN incident_reports ir
+    ON ui.user_id = ir.user_id
     AND  ui.incident_id = ir.incident_id
-    AND  ui.incident_time_last_update = ir.incident_last_update
-    AND  ui.aqi_last_update <= (ir.aqi_last_update
-                                    + interval '4 hour')
+    AND  ui.incident_last_update = ir.incident_last_update
     JOIN users u ON ui.user_id = u.user_id
     JOIN devices d ON ui.user_id = d.user_id
-    WHERE ir.user_id IS NULL;
+    WHERE (ir.user_id IS NULL AND
+           ir.incident_id IS NULL AND
+           ir.incident_last_update IS NULL)
+    OR     (ui.aqi_last_update <= (ir.aqi_last_update
+                                        + interval '4 hour'));
     """

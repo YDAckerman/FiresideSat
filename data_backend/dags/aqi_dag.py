@@ -20,11 +20,11 @@ default_args = {
 # ##############################################
 
 dag = DAG('aqi_dag',
-          start_date=datetime(2021, 4, 1),
-          end_date=datetime(2021, 4, 2),
+          start_date=datetime(2021, 5, 2),
+          end_date=datetime(2021, 5, 3),
           default_args=default_args,
           description='ELT for AQI Conditions',
-          schedule_interval=timedelta(days=5),
+          schedule_interval=timedelta(days=1),
           max_active_runs=1,
           catchup=True
           )

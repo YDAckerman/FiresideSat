@@ -1,4 +1,5 @@
 from helpers.api_endpoint import ApiEndpoint, make_headers
+from helpers.sql_queries import SqlQueries
 
 
 class Report:
@@ -9,12 +10,9 @@ class Report:
         self.message = self.format_template(message_template)
 
     def send(self, http_hook, log):
-        try:
-            return http_hook.run(**self._make_parameters())
-        except Exception as e:
-            log.info(e)
+        return http_hook.run(**self._make_parameters())
 
-    def mark_sent(self, pg_cur, sql):
+    def save(self, pg_cur, sql):
         pg_cur.execute(sql, self.report_data)
 
     def format_template(self, template):
@@ -26,16 +24,14 @@ class Report:
     def _make_report_data(self, record, record_cols):
 
         if len(record_cols) is not len(record):
-
+            """
+            NOTE: does not check that the record values have the correct
+                  type/format/anything
+            TODO: safety?
+            """
             raise ValueError("Record names are misaligned.")
 
         report_data = dict(zip(record_cols, record))
-        report_data_keys = report_data.keys()
-
-        if 'mapshare_pw' not in report_data_keys or \
-           'device_id' not in report_data_keys:
-
-            raise ValueError("Record has insufficient data.")
 
         return report_data
 
@@ -52,33 +48,42 @@ class Report:
     def _make_json(self):
         return {
             'deviceIds': self.report_data['device_id'],
-            'fromAdd': 'noreply@firesidesat.com',
+            'fromAddr': 'noreply@firesidesat.com',
             'messageText': self.message
         }
 
     def _make_parameters(self):
         return {
-            'json': self._make_json(),
             'endpoint': self._make_endpoint(),
-            'headers': self._make_headers()
+            'headers': self._make_headers(),
+            'json': self._make_json()
         }
 
 
 class ReportFactory():
 
+    failure_message = "{report_type} message failed to send " \
+        + "to {user_id} on {current_date}"
+
+    sql = SqlQueries()
+
+    # There is some redundancy here, but I think it adds clarity
     reports_dict = {
 
         "trip_state_report": {
             'columns': ["user_id",
                         "mapshare_id",
                         "mapshare_pw",
+                        "trip_id",
                         "start_date",
                         "end_date",
                         "device_id",
                         "state",
                         "date_sent"],
             'message_template': '{state} incident reports '
-            + 'for trip dates {start_date} to {end_date}'
+            + 'for trip dates {start_date} to {end_date}',
+            'records_sql': sql.select_state_change_users,
+            'save_sql': sql.insert_trip_state_report
         },
 
         'incident_report': {
@@ -91,25 +96,43 @@ class ReportFactory():
                         "perimeter_lat",
                         "centroid_lon",
                         "centroid_lat",
-                        "aqi_max",
+                        "max_aqi",
                         "aqi_obs_lon",
                         "aqi_obs_lat",
                         "mapshare_id",
                         "mapshare_pw",
-                        "garmin_device_id"],
-            'message_template': 'Incident Name: {incident_name} '
-            + 'Last Update: {incident_last_update} |'
-            + 'Incident Behavior: {incident_behavior} |'
-            + 'Centroid (lon,lat): ({centroid_lon},{centroid_lat} |'
-            + 'Nearest Point (lon,lat): '
-            + '({perimeter_lon},{perimeter_lat}) |'
-            + 'Max AQI: {max_aqi} |'
-            + 'AQI Location (lon, lat): ({aqi_obs_lon}, {aqi_obs_lat})'
+                        "device_id"],
+            'message_template': '{incident_name} | '
+            + 'update: {incident_last_update} | '
+            + 'behavior: {incident_behavior} | '
+            + 'center: {centroid_lat},{centroid_lon} | '
+            + 'edge: {perimeter_lat},{perimeter_lon} | '
+            + 'max aqi: {max_aqi} | '
+            + 'aqi obs: {aqi_obs_lat}, {aqi_obs_lon}',
+            'records_sql': sql.select_user_incidents,
+            'save_sql': sql.insert_incident_report
         }
     }
 
-    def __init__(self, report_type):
+    def __init__(self, report_type, date_sent):
+        self.report_type = report_type
         self.report_metadata = self.reports_dict[report_type]
+        self.date_sent = date_sent
 
-    def generate_from(self, record):
-        return Report(record, **self.report_metadata)
+    def make_report(self, record):
+        self.report = Report(record,
+                             self.report_metadata['columns'],
+                             self.report_metadata['message_template'])
+        return self.report
+
+    def get_failure_message(self):
+        return self.failure_message.format(
+            report_type=self.report_type,
+            user_id=self.report.get_recipient(),
+            current_date=self.date_sent)
+
+    def get_records_sql(self):
+        return self.report_metadata['records_sql']
+
+    def get_save_sql(self):
+        return self.report_metadata['save_sql']

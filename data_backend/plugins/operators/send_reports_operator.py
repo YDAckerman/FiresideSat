@@ -5,7 +5,7 @@ from airflow.utils.decorators import apply_defaults
 from helpers.comms import Comms
 
 
-class SendMessagesOperator(BaseOperator):
+class SendReportsOperator(BaseOperator):
 
     @apply_defaults
     def __init__(self,
@@ -14,7 +14,7 @@ class SendMessagesOperator(BaseOperator):
                  message_type,
                  *args, **kwargs):
 
-        super(SendMessagesOperator, self).__init__(*args, **kwargs)
+        super(SendReportsOperator, self).__init__(*args, **kwargs)
         self.pg_conn_id = postgres_conn_id
         self.http_conn_id = http_conn_id
         self.message_type = message_type
