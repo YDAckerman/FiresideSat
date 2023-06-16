@@ -32,11 +32,11 @@ class Comms():
         for record in report_records:
 
             report = report_factory.make_report(record)
-            http_resp = report.send(self.http_hook, log)
+            http_resp = report.send(self.http_hook)
 
             if http_resp and json.loads(http_resp.text)['success']:
 
-                report.save(pg_cur, report_factory.get_save_sql())
+                report.save(pg_cur)
 
             else:
 

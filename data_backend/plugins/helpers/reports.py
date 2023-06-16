@@ -4,19 +4,21 @@ from helpers.sql_queries import SqlQueries
 
 class Report:
 
-    def __init__(self, record, record_cols, message_template):
+    def __init__(self, record, record_cols, message_template, save_sql):
 
         self.report_data = self._make_report_data(record, record_cols)
         self.message = self.format_template(message_template)
+        self.save_sql = save_sql
 
-    def send(self, http_hook, log):
+    def send(self, http_hook):
+
         return http_hook.run(**self._make_parameters())
 
-    def save(self, pg_cur, sql):
-        pg_cur.execute(sql, self.report_data)
+    def save(self, pg_cur):
+        pg_cur.execute(self.save_sql, self.report_data)
 
-    def format_template(self, template):
-        return template.format(**self.report_data)
+    def format_template(self, template, **kwargs):
+        return template.format(**self.report_data, **kwargs)
 
     def get_recipient(self):
         return self.report_data['user_id']
@@ -53,11 +55,12 @@ class Report:
         }
 
     def _make_parameters(self):
+
         return {
             'endpoint': self._make_endpoint(),
             'headers': self._make_headers(),
             'json': self._make_json()
-        }
+            }
 
 
 class ReportFactory():
@@ -82,6 +85,7 @@ class ReportFactory():
                         "date_sent"],
             'message_template': '{state} incident reports '
             + 'for trip dates {start_date} to {end_date}',
+            'message_header': '',
             'records_sql': sql.select_state_change_users,
             'save_sql': sql.insert_trip_state_report
         },
@@ -90,6 +94,7 @@ class ReportFactory():
             'columns': ["user_id", "incident_id",
                         "incident_last_update",
                         "aqi_last_update",
+                        "total_acres",
                         "incident_behavior",
                         "incident_name",
                         "perimeter_lon",
@@ -102,13 +107,12 @@ class ReportFactory():
                         "mapshare_id",
                         "mapshare_pw",
                         "device_id"],
-            'message_template': '{incident_name} | '
-            + 'update: {incident_last_update} | '
-            + 'behavior: {incident_behavior} | '
-            + 'center: {centroid_lat},{centroid_lon} | '
-            + 'edge: {perimeter_lat},{perimeter_lon} | '
-            + 'max aqi: {max_aqi} | '
-            + 'aqi obs: {aqi_obs_lat}, {aqi_obs_lon}',
+            'message_template': '{incident_name}|'
+            + '{incident_last_update}|'
+            + 'acres:{total_acres}|'
+            + 'c:{centroid_lat},{centroid_lon}|'
+            + 'e:{perimeter_lat},{perimeter_lon}|'
+            + 'aqi:{max_aqi}',
             'records_sql': sql.select_user_incidents,
             'save_sql': sql.insert_incident_report
         }
@@ -122,7 +126,8 @@ class ReportFactory():
     def make_report(self, record):
         self.report = Report(record,
                              self.report_metadata['columns'],
-                             self.report_metadata['message_template'])
+                             self.report_metadata['message_template'],
+                             self.report_metadata['save_sql'])
         return self.report
 
     def get_failure_message(self):

@@ -36,7 +36,7 @@ class EtlFunctions():
                                               context, log)
         else:
 
-            log.info("No functionality for the provided enpoint.")
+            log.info("Unknown endpoint.")
 
         pg_conn.close()
 

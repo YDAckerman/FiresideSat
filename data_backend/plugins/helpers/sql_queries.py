@@ -437,15 +437,16 @@ class SqlQueries:
            ci.incident_id,
            to_timestamp(ci.date_current / 1000) AS incident_last_update,
            ca.aqi_date AS aqi_last_update,
+           ci.total_acres AS total_acres,
            ci.behavior AS incident_behavior,
            ci.incident_name,
            -- md.dist_m_min AS dist_m_to_perimeter,
-           ST_X(ST_Transform(ptp.perimeter_geom, 4326)) AS perimeter_lon,
-           ST_Y(ST_Transform(ptp.perimeter_geom, 4326)) AS perimeter_lat,
+           round(ST_X(ST_Transform(ptp.perimeter_geom, 4326))::numeric, 4) AS perimeter_lon,
+           round(ST_Y(ST_Transform(ptp.perimeter_geom, 4326))::numeric, 4) AS perimeter_lat,
            -- ST_Distance(ptp.last_location::geography,
            --            ci.centroid::geography) AS dist_m_to_centroid,
-           ST_X(ST_Transform(ci.centroid, 4326)) AS centroid_lon,
-           ST_Y(ST_Transform(ci.centroid, 4326)) AS centroid_lat,
+           round(ST_X(ST_Transform(ci.centroid, 4326))::numeric, 4) AS centroid_lon,
+           round(ST_Y(ST_Transform(ci.centroid, 4326))::numeric, 4) AS centroid_lat,
            ca.max_aqi,
            ST_X(ST_Transform(ca.geom, 4326)) AS aqi_obs_lon,
            ST_Y(ST_Transform(ca.geom, 4326)) AS aqi_obs_lat
@@ -491,5 +492,5 @@ class SqlQueries:
            ir.incident_id IS NULL AND
            ir.incident_last_update IS NULL)
     OR     (ui.aqi_last_update <= (ir.aqi_last_update
-                                        + interval '4 hour'));
+                                        + interval '12 hour'));
     """
