@@ -18,9 +18,13 @@ class ApiEndpoint():
         if context is None:
             raise ValueError("Endpoints require context data")
 
-        if endpoint_name == "wildfire_endpoint":
+        if endpoint_name == "wildfire_current_endpoint":
 
-            return self._format_wildfire_endpoint(context)
+            return self._wfigs_current_incidents_endpoint
+
+        elif endpoint_name == "wildfire_test_endpoint":
+
+            return self._format_wildfire_test_endpoint(context)
 
         elif endpoint_name == "airnow_endpoint":
 
@@ -49,9 +53,10 @@ class ApiEndpoint():
 
         return self \
             ._airnow_radius_endpoint \
-            .format(lat=lat, lon=lon, radius_miles=radius_miles, key=api_key)
+            .format(lat=lat, lon=lon,
+                    radius_miles=radius_miles, key=api_key)
 
-    def _format_wildfire_endpoint(self, context):
+    def _format_wildfire_test_endpoint(self, context):
 
         current_date = context.get('data_interval_start')
         start_date = current_date.to_date_string()
@@ -59,10 +64,10 @@ class ApiEndpoint():
             .add(days=1) \
             .to_date_string()
 
-        return self._wildfire_incidents_test_endpoint \
+        return self._wfigs_test_incidents_endpoint \
                    .format(start_date, end_date)
 
-    _airnow_bbox_url = "https://airnowapi.org/aq/data/" \
+    _airnow_bbox_endpoint = "https://airnowapi.org/aq/data/" \
         + "?startDate={year}-{month}-{day}T{hour_start}" \
         + "&endDate={year}-{month}-{day}T{hour_end}" \
         + "&parameters=PM25" \
@@ -81,28 +86,12 @@ class ApiEndpoint():
         + "&distance={radius_miles}" \
         + "&API_KEY={key}"
 
-    _active_wildfire_incidents_url = "https://services3.arcgis.com/" \
-        + "T4QMspbfLg3qTGWY/arcgis/rest/services/" \
-        + "Current_WildlandFire_Perimeters/" \
+    _wfigs_current_incidents_endpoint = "WFIGS_Interagency_" \
+        + "Perimeters_Current/" \
         + "FeatureServer/0/query?f=json&where=" \
-        + "(irwin_POOState%20IN%20(%27US-CA%27))&outFields=*"
+        + "(attr_POOState%20IN%20('US-CA'))&outFields=*"
 
-    _wildfire_incidents_test_url = "https://services3.arcgis.com/" \
-        + "T4QMspbfLg3qTGWY/arcgis" \
-        + "/rest/services/" \
-        + "WFIGS_Interagency_Perimeters/" \
-        + "FeatureServer" \
-        + "/0/query?f=json&where=" \
-        + "(poly_CreateDate%20%3E%3D%" \
-        + "20DATE%20'{}'%20" \
-        + "AND" \
-        + "%20poly_CreateDate%20%3C%3D%" \
-        + "20DATE%20'{}')%20" \
-        + "AND" \
-        + "%20(irwin_POOState" \
-        + "%20IN%20('US-CA'))&ouFields=*"
-
-    _wildfire_incidents_test_endpoint = "WFIGS_Interagency_Perimeters/" \
+    _wfigs_test_incidents_endpoint = "WFIGS_Interagency_Perimeters/" \
         + "FeatureServer" \
         + "/0/query?f=json&where=" \
         + "(poly_CreateDate%20%3E%3D%" \

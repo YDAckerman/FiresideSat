@@ -1,5 +1,5 @@
 from airflow.hooks.postgres_hook import PostgresHook
-
+from airflow.hooks.http_hook import HttpHook
 from airflow.models import BaseOperator
 from airflow.utils.decorators import apply_defaults
 from helpers.etl_functions import EtlFunctions
@@ -31,4 +31,3 @@ class StageDataOperator(BaseOperator):
                                 pg_hook,
                                 context,
                                 self.log)
-

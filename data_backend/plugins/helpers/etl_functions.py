@@ -19,33 +19,46 @@ class EtlFunctions():
         pg_conn = pg_hook.get_conn()
         pg_cur = pg_conn.cursor()
 
-        if endpoint == "wildfire_endpoint":
+        if endpoint == "wildfire_current_endpoint":
 
-            self._load_from_wildfire_endpoint(http_hook, pg_conn,
-                                              pg_cur, context, log)
+            endpoint = self.api \
+                           .format_endpoint("wildfire_current_endpoint",
+                                            context)
 
-        if endpoint == "airnow_endpoint":
+            self._load_from_wildfire_endpoint(http_hook, endpoint,
+                                              pg_conn, pg_cur,
+                                              context, log)
+
+        elif endpoint == "wildfire_test_endpoint":
+
+            endpoint = self.api \
+                           .format_endpoint("wildfire_test_endpoint",
+                                            context)
+
+            self._load_from_wildfire_endpoint(http_hook, endpoint,
+                                              pg_conn, pg_cur,
+                                              context, log)
+
+        elif endpoint == "airnow_endpoint":
 
             self._load_from_airnow_endpoint(http_hook, pg_conn,
                                             pg_cur, context, log)
 
-        if endpoint == "mapshare_feed_endpoint":
+        elif endpoint == "mapshare_feed_endpoint":
 
             self._load_from_mapshare_endpoint(http_hook,
                                               pg_conn, pg_cur,
                                               context, log)
         else:
 
-            log.info("Unknown endpoint.")
+            raise ValueError("Unrecognized enpoint")
 
         pg_conn.close()
 
-    def _load_from_wildfire_endpoint(self, http_hook,
+    def _load_from_wildfire_endpoint(self, http_hook, endpoint,
                                      pg_conn, pg_cur, context, log):
 
-        endpoint_fmt = self.api \
-            .format_endpoint("wildfire_endpoint", context)
-        response = http_hook.run(endpoint=endpoint_fmt)
+        response = http_hook.run(endpoint=endpoint)
         response = json.loads(response.text)
 
         if response:
@@ -60,6 +73,8 @@ class EtlFunctions():
 
                 incident_values = self \
                     ._extract_incident_values(attributes)
+
+                log.info("Incident data:" + str(incident_values))
 
                 perimeter_values = self \
                     ._extract_perimeter_values(incident_id, rings)

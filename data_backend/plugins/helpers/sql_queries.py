@@ -95,6 +95,7 @@ class SqlQueries:
     user_id            integer        NOT NULL,
     setting_name       varchar(256)   NOT NULL,
     setting_value      varchar(256)   NOT NULL
+    );
     """
 
     create_trip_tables = """
@@ -483,7 +484,7 @@ class SqlQueries:
     SELECT ui.*, u.mapshare_id, u.mapshare_pw, d.garmin_device_id
     FROM user_incidents ui
     LEFT JOIN incident_reports ir
-    ON ui.user_id = ir.user_id
+    ON   ui.user_id = ir.user_id
     AND  ui.incident_id = ir.incident_id
     AND  ui.incident_last_update = ir.incident_last_update
     JOIN users u ON ui.user_id = u.user_id
@@ -492,5 +493,7 @@ class SqlQueries:
            ir.incident_id IS NULL AND
            ir.incident_last_update IS NULL)
     OR     (ui.aqi_last_update <= (ir.aqi_last_update
-                                        + interval '12 hour'));
+                                        + interval '12 hour'))
+    ORDER BY ui.user_id, ui.max_aqi DESC
+    LIMIT 2;
     """
