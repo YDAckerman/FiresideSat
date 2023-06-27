@@ -20,7 +20,7 @@ default_args = {
 # ##############################################
 
 dag = DAG('prod_aqi_dag',
-          start_date=datetime.now(),
+          start_date=datetime(2023, 6, 20),
           default_args=default_args,
           description='ELT for AQI Conditions',
           schedule_interval='@hourly'

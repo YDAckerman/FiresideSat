@@ -20,7 +20,7 @@ default_args = {
 # ##############################################
 
 dag = DAG('prod_update_incidents_dag',
-          start_date=datetime.now(),
+          start_date=datetime(2023, 6, 20),
           default_args=default_args,
           description='ELT for Wildfire Conditions',
           schedule_interval='@hourly'
@@ -45,7 +45,7 @@ stage_wildfire_data = StageDataOperator(
     dag=dag,
     postgres_conn_id="fireside_prod",
     http_conn_id="wildfire_api",
-    api_endpoint="wildfire_test_endpoint"
+    api_endpoint="wildfire_current_endpoint"
 )
 
 upsert_staging_centroids = PostgresOperator(

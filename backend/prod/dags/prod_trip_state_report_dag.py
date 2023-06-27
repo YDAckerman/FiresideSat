@@ -19,7 +19,7 @@ default_args = {
 # ##############################################
 
 dag = DAG('prod_trip_state_report_dag',
-          start_date=datetime.now(),
+          start_date=datetime(2023, 6, 20),
           default_args=default_args,
           description='Send trip start/stop messages',
           schedule='@daily'

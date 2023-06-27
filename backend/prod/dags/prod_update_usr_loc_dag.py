@@ -20,7 +20,7 @@ default_args = {
 # ##############################################
 
 dag = DAG('prod_update_usr_loc',
-          start_date=datetime.now(),
+          start_date=datetime(2023, 6, 20),
           default_args=default_args,
           description='Update User Locations',
           schedule_interval='@hourly'
