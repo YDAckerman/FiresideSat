@@ -91,6 +91,16 @@ class ApiEndpoint():
         + "FeatureServer/0/query?f=json&where=" \
         + "(attr_POOState%20IN%20('US-CA'))&outFields=*"
 
+    _wfigs_test_incident_locations_enpoint = "WFIGS_Incident_Locations" \
+        + "/FeatureServer/0/" \
+        + "query?f=json&where=" \
+        + "(FireDiscoveryDateTime%20%3E%3D%20DATE%20'{}'%20" \
+        + "AND" \
+        + "%20FireDiscoveryDateTime%20%3C%3D%20DATE%20'{}')%20" \
+        + "AND" \
+        + "%20(POOState%20IN%20('US-CA'))" \
+        + "&outFields=*"
+
     _wfigs_test_incidents_endpoint = "WFIGS_Interagency_Perimeters/" \
         + "FeatureServer" \
         + "/0/query?f=json&where=" \
@@ -103,7 +113,7 @@ class ApiEndpoint():
         + "%20(attr_POOState" \
         + "%20IN%20('US-CA'))&outFields=*"
 
-    _wfigs_latest_incidents_endpoint = "WFIGS_Incident_" \
+    _wfigs_current_incident_locations_endpoint = "WFIGS_Incident_" \
         + "Locations_Current" \
         + "/FeatureServer/0/" \
         + "query?f=json&" \
