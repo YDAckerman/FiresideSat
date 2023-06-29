@@ -1,4 +1,4 @@
-
+from airflow.models import Variable
 import base64
 
 

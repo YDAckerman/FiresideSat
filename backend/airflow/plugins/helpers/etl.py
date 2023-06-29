@@ -1,9 +1,26 @@
+from airflow.models import Variable
 from helpers.sql_queries import SqlQueries
-from helpers.api_endpoint import ApiEndpoint, make_headers
+from helpers.api_endpoint import EndpointFactory, make_headers
 from pykml import parser
 from datetime import datetime
 import psycopg2.extras
 import json
+
+
+class ELT():
+
+    def __init__(self, endpoint_abbr, load_fun):
+        self.endpoint = EndpointFactory().get_endpoint(endpoint_abbr)
+        self.load = load_fun
+
+    def run(self, http_hook, pg_hook, context, log):
+
+        endpoint = self.endpoint.format(**context)
+        self.load(endpoint, http_hook, pg_hook, context, log)
+
+  
+## add variables to context
+
 
 
 class EtlFunctions():
