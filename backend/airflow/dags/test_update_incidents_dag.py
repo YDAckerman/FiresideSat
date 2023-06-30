@@ -48,7 +48,7 @@ stage_wildfire_data = StageDataOperator(
     dag=dag,
     postgres_conn_id="fireside",
     http_conn_id="wildfire_api",
-    api_endpoint="wildfire_test_endpoint"
+    endpoint_name="test_locations"
 )
 
 upsert_staging_centroids = PostgresOperator(

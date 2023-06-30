@@ -1,60 +1,33 @@
-from helpers.endpoint import EndpointFactory
+from helpers.endpoint import Endpoint
+from helpers.elt_funs import elt_wildfire_locations, \
+    elt_wildfire_perimeters, \
+    elt_mapshare_locs, \
+    elt_fire_locs_aqi
+
+ELT_DICT = {
+        'mapshare': elt_mapshare_locs,
+        'airnow': elt_fire_locs_aqi,
+        'test_perimeters': elt_wildfire_perimeters,
+        'test_locations': elt_wildfire_locations,
+        'current_perimeters': elt_wildfire_perimeters,
+        'current_locations': elt_wildfire_locations,
+}
 
 
-class ELT():
+class ELTProcess():
 
-    def __init__(self, endpoint_abbr, load_fun):
-        self.endpoint = EndpointFactory().get_endpoint(endpoint_abbr)
-        self.load = load_fun
+    def __init__(self, endpoint_name, http_hook, pg_hook, context, log):
+        self.endpoint = Endpoint(http_hook, endpoint_name)
+        self.pg_conn = pg_hook.get_conn()
+        self.pg_cur = self.pg_conn.cursor()
+        self.context = context
+        self.log = log
+        self.elt_fun = ELT_DICT[self.endpoint.name]
 
-    def run(self, http_hook, pg_hook, context, log):
+    def run(self):
 
-        pass
+        self.elt_fun(self.endpoint, self.pg_conn,
+                     self.pg_cur, self.context,
+                     self.log)
 
-## add variables to context
-
-
-
-class EtlFunctions():
-
-
-    def load_from_endpoint(self, endpoint, http_hook, pg_hook, context, log):
-
-        pg_conn = pg_hook.get_conn()
-        pg_cur = pg_conn.cursor()
-
-        if endpoint == "wildfire_current_endpoint":
-
-            endpoint = self.api \
-                           .format_endpoint("wildfire_current_endpoint",
-                                            context)
-
-            self._load_from_wildfire_endpoint(http_hook, endpoint,
-                                              pg_conn, pg_cur,
-                                              context, log)
-
-        elif endpoint == "wildfire_test_endpoint":
-
-            endpoint = self.api \
-                           .format_endpoint("wildfire_test_endpoint",
-                                            context)
-
-            self._load_from_wildfire_endpoint(http_hook, endpoint,
-                                              pg_conn, pg_cur,
-                                              context, log)
-
-        elif endpoint == "airnow_endpoint":
-
-            self._load_from_airnow_endpoint(http_hook, pg_conn,
-                                            pg_cur, context, log)
-
-        elif endpoint == "mapshare_feed_endpoint":
-
-            self._load_from_mapshare_endpoint(http_hook,
-                                              pg_conn, pg_cur,
-                                              context, log)
-        else:
-
-            raise ValueError("Unrecognized enpoint")
-
-        pg_conn.close()
+        self.pg_conn.close()

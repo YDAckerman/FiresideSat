@@ -6,8 +6,10 @@ AIRNOW_RADIUS_ENDPOINT = "?format=application/json" \
 
 WFIGS_CURRENT_INCIDENT_PERIMETERS_ENDPOINT = "WFIGS_Interagency_" \
     + "Perimeters_Current/" \
-    + "FeatureServer/0/query?f=json&where=" \
-    + "(attr_POOState%20IN%20('US-CA'))&outFields=*"
+    + "/FeatureServer/0/query?f" \
+    + "=json&where=(" \
+    + "attr_UniqueFireIdentifier%20IN%20('{}'))" \
+    + "&outFields=*"
 
 WFIGS_CURRENT_INCIDENT_LOCATIONS_ENDPOINT = "WFIGS_Incident_" \
     + "Locations_Current" \
@@ -25,19 +27,24 @@ WFIGS_TEST_INCIDENT_LOCATIONS_ENPOINT = "WFIGS_Incident_Locations" \
     + "%20(POOState%20IN%20('US-CA'))" \
     + "&outFields=*"
 
-WFIGS_TEST_INCIDENT_PERIMETERS_ENDPOINT = "WFIGS"\
-    + "_Interagency_Perimeters/" \
-    + "FeatureServer" \
-    + "/0/query?f=json&where=" \
-    + "(poly_CreateDate%20%3E%3D%" \
-    + "20DATE%20'{data_interval_start}'%20" \
-    + "AND" \
-    + "%20poly_CreateDate%20%3C%3D%" \
-    + "20DATE%20'{data_interval_start}')%20" \
-    + "AND" \
-    + "%20(attr_POOState" \
-    + "%20IN%20('US-CA'))&outFields=*"
+WFIGS_TEST_INCIDENT_PERIMETERS_ENDPOINT = "WFIGS_Interagency_Perimeters" \
+    + "/FeatureServer/0/query?f" \
+    + "=json&where=(" \
+    + "attr_UniqueFireIdentifier%20IN%20('{}'))" \
+    + "&outFields=*"
 
 MAPSHARE_FEED_ENDPOINT = "{user}?imei={imei}"
 
 SEND_MESSAGE_ENDPOINT = "{user}/Map/SendMessageToDevices"
+
+# '2021-CABTU-009347'%2C%20'2021-CABTU-009205'
+
+ENDPOINT_DICT = {
+        'mapshare': MAPSHARE_FEED_ENDPOINT,
+        'airnow': AIRNOW_RADIUS_ENDPOINT,
+        'send_message': SEND_MESSAGE_ENDPOINT,
+        'test_perimeters': WFIGS_TEST_INCIDENT_PERIMETERS_ENDPOINT,
+        'test_locations': WFIGS_TEST_INCIDENT_LOCATIONS_ENPOINT,
+        'current_perimeters': WFIGS_CURRENT_INCIDENT_PERIMETERS_ENDPOINT,
+        'current_locations': WFIGS_CURRENT_INCIDENT_LOCATIONS_ENDPOINT
+}

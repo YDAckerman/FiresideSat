@@ -1,34 +1,40 @@
 from pykml import parser
 from datetime import datetime
 
-
-def extract_incident_values(attributes):
-
-    # Need to add 'geometry:{x:, y:}'
-    attribute_keys = [
-        'poly_SourceGlobalID', # SourceGlobalId
-        'poly_IncidentName',   # IncidentName
-        'attr_FireBehaviorGeneral', # FireBehaviorGeneral
-        'attr_CalculatedAcres', # IncidentSize
-        'attr_PercentContained', # PercentContained
-        'poly_DateCurrent', # ModifiedOnDateTime_dt
-        'poly_CreateDate'# CreatedOnDateTime_dt
+FIRE_INCIDENT_ATTR_KEYS = [
+        'UniqueFireIdentifier',
+        'IncidentName',
+        'FireBehaviorGeneral',
+        'IncidentSize',
+        'PercentContained',
+        'CreatedOnDateTime_dt',
+        'ModifiedOnDateTime_dt'
     ]
 
-    # None holds the lat/lon centroid values that
-    # will come as part of the transform step
-    return ([attributes[x] for x in attribute_keys] + [None])
+
+def extract_incident_attr(feature):
+
+    attributes = feature['attributes']
+
+    lon_lat = list(attributes['geometry'].values())
+
+    incident_attr = [attributes[x] for x in FIRE_INCIDENT_ATTR_KEYS]
+
+    return (incident_attr + lon_lat)
 
 
-def extract_perimeter_values(incident_id, rings):
+def extract_perimeter_attr(feature):
 
+    attributes = feature['attributes']
+    incident_id = attributes['attr_UniqueFireIdentifier']
+    rings = feature['geometry']['rings']
     return ([(incident_id, i, x[0], x[1])
              for i in range(len(rings))
              for x in rings[i]
              ])
 
 
-def extract_aqi_values(incident_id, api_response):
+def extract_aqi_attr(incident_id, api_response):
     """
     - loop through api_result
     - for each record, get date and location/aqi recorded
@@ -43,7 +49,7 @@ def extract_aqi_values(incident_id, api_response):
     return tuples_list
 
 
-def extract_feed_values(api_response):
+def extract_feed_attr(api_response):
 
     # see for details on kml feed:
     # https://support.garmin.com/en-US/?faq=tdlDCyo1fJ5UxjUbA9rMY8

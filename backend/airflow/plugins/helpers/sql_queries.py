@@ -186,12 +186,18 @@ class SqlQueries:
     CREATE TABLE IF NOT EXISTS staging_incidents (
     incident_id varchar(256) PRIMARY KEY,
     incident_name varchar(256),
-    centroid geometry(Point, 4326),
-    date_created bigint NOT NULL,
-    date_current bigint NOT NULL,
     behavior varchar(256),
     total_acres integer,
     percent_contained smallint
+    date_created bigint NOT NULL,
+    date_current bigint NOT NULL,
+    raw_lon numeric NOT NULL,
+    raw_lat numeric NOT NULL,
+    centroid geometry(Point, 4326) GENERATED ALWAYS AS (
+        ST_SetSRID(
+                   ST_MakePoint(raw_lon, raw_lat),
+                   4326
+        )) STORED
     );
 
     CREATE TABLE IF NOT EXISTS staging_perimeters (
@@ -273,7 +279,10 @@ class SqlQueries:
 
     upsert_current_incident = """
     INSERT INTO current_incidents
-    SELECT * FROM staging_incidents
+    SELECT incident_id, incident_name, behavior, total_acres,
+           percent_contained, date_current, date_created,
+           centroid
+    FROM staging_incidents
     WHERE staging_incidents.incident_id IN
     (SELECT incident_id FROM staging_incidents_updated)
     ON CONFLICT (incident_id) DO
@@ -302,6 +311,13 @@ class SqlQueries:
     (SELECT incident_id FROM staging_incidents_updated);
     """
 
+    select_current_incident_ids = """
+    SELECT incident_id FROM current_incidents;
+    """
+
+    # this may no longer be necessary
+    # I suppose I can calculate my own centroid based on
+    # perimeter, but technically don't have to.
     upsert_staging_centroids = """
     UPDATE staging_incidents SET
                    centroid = pc.centroid
@@ -335,8 +351,8 @@ class SqlQueries:
                 incident_id, incident_name,
                 behavior, total_acres,
                 percent_contained, date_created,
-                date_current, centroid)
-    VALUES (%s,%s,%s,%s,%s,%s,%s,%s);
+                date_current, raw_lon, raw_lat)
+    VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s);
     """
 
     insert_staging_perimeter = """
