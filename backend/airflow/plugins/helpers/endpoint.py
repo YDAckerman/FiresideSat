@@ -1,31 +1,29 @@
-from helpers.endpoint_templates import ENDPOINT_DICT
-import base64
 
 
 class Endpoint():
 
-    def __init__(self, http_hook, endpoint_name):
+    def __init__(self, http_hook, endpoint_name, template):
         self._http_hook = http_hook
-        self._template = ENDPOINT_DICT[endpoint_name]
+        self._template = template
         self._name = endpoint_name
 
     @property
     def name(self):
         return self._name
 
-    def _format(self, *args, **kwargs):
-        return self._template.format(*args, **kwargs)
+    def set_route(self, *args, **kwargs):
+        self.route = self._template.format(*args, **kwargs)
 
-    def run(self, context_vars, headers=None):
-        return self._http_hook \
-                   .run(endpoint=self._format(**context_vars),
-                        headers=headers)
+    def get(self, *args, **kwargs):
+        return self._http_hook.run(endpoint=self.route,
+                                   *args, **kwargs)
+
+    def post(self, json=None, *args, **kwargs):
+        if not json:
+            raise ValueError("must provide data to post")
+        return self._http_hook.run(endpoint=self.route,
+                                   json=json,
+                                   *args, **kwargs)
 
     def warn(self):
         return "No response from {} endpoint".format(self._name)
-
-    @staticmethod
-    def make_headers(usr, pw):
-        usr_pw = f'{usr}:{pw}'
-        b64_val = base64.b64encode(usr_pw.encode()).decode()
-        return {"Authorization": "Basic %s" % b64_val}

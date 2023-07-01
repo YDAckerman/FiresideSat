@@ -3,7 +3,7 @@ from airflow import DAG
 from airflow.operators.dummy_operator import DummyOperator
 from airflow.operators.postgres_operator import PostgresOperator
 from operators.stage_data_operator import StageDataOperator
-from helpers.sql_queries import SqlQueries
+from helpers.sql_queries import SqlQueries as sql
 
 # ##############################################
 #  default arguments
@@ -38,7 +38,7 @@ create_staging_aqi = PostgresOperator(
     task_id="create_staging_aqi",
     dag=dag,
     postgres_conn_id="fireside_prod",
-    sql=SqlQueries.create_staging_aqi
+    sql=sql.create_staging_aqi
 )
 
 stage_aqi_data_operator = StageDataOperator(
@@ -46,21 +46,21 @@ stage_aqi_data_operator = StageDataOperator(
     dag=dag,
     postgres_conn_id="fireside_prod",
     http_conn_id="airnow",
-    api_endpoint="airnow_endpoint"
+    endpoint_name="airnow"
 )
 
 upsert_current_operator = PostgresOperator(
     task_id="upsert_current",
     dag=dag,
     postgres_conn_id="fireside_prod",
-    sql=SqlQueries.upsert_current_aqi
+    sql=sql.upsert_current_aqi
 )
 
 delete_outdated_operator = PostgresOperator(
     task_id="delete_outdated",
     dag=dag,
     postgres_conn_id="fireside_prod",
-    sql=SqlQueries.delete_aqi_outdated
+    sql=sql.delete_aqi_outdated
 )
 
 end_operator = DummyOperator(task_id='Stop_execution', dag=dag)

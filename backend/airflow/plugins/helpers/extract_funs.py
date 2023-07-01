@@ -15,9 +15,7 @@ FIRE_INCIDENT_ATTR_KEYS = [
 def extract_incident_attr(feature):
 
     attributes = feature['attributes']
-
-    lon_lat = list(attributes['geometry'].values())
-
+    lon_lat = list(feature['geometry'].values())
     incident_attr = [attributes[x] for x in FIRE_INCIDENT_ATTR_KEYS]
 
     return (incident_attr + lon_lat)

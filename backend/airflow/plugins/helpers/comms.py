@@ -1,6 +1,7 @@
 from helpers.reports import ReportFactory
+from helpers.endpoint import Endpoint
+from helpers.endpoint_templates import SEND_MESSAGE_TEMPLATE
 import json
-
 
 # from selenium import webdriver
 # from selenium.webdriver.support.ui import WebDriverWait
@@ -10,7 +11,7 @@ import json
 MAX_DIST_M = 1220000
 
 
-class Comms():
+class CommsProcess():
 
     def __init__(self, http_hook, pg_hook):
         print("using comms")
@@ -18,6 +19,10 @@ class Comms():
         self.pg_hook = pg_hook
 
     def send_messages(self, report_type, context, log):
+
+        endpoint = Endpoint(self.http_hook,
+                            'send_message',
+                            SEND_MESSAGE_TEMPLATE)
 
         pg_conn = self.pg_hook.get_conn()
         pg_cur = pg_conn.cursor()
@@ -34,9 +39,9 @@ class Comms():
         for record in report_records:
 
             report = report_factory.make_report(record)
-            http_resp = report.send(self.http_hook)
+            endpt_resp = report.send(endpoint)
 
-            if http_resp and json.loads(http_resp.text)['success']:
+            if endpt_resp and json.loads(endpt_resp.text)['success']:
 
                 report.save(pg_cur)
 

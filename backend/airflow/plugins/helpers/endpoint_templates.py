@@ -1,50 +1,41 @@
-AIRNOW_RADIUS_ENDPOINT = "?format=application/json" \
+
+AIRNOW_RADIUS_TEMPLATE = "?format=application/json" \
     + "&latitude={lat}" \
     + "&longitude={lon}" \
     + "&distance={radius_miles}" \
     + "&API_KEY={key}"
 
-WFIGS_CURRENT_INCIDENT_PERIMETERS_ENDPOINT = "WFIGS_Interagency_" \
+WFIGS_CURRENT_INCIDENT_PERIMETERS_TEMPLATE = "WFIGS_Interagency_" \
     + "Perimeters_Current/" \
     + "/FeatureServer/0/query?f" \
     + "=json&where=(" \
-    + "attr_UniqueFireIdentifier%20IN%20('{}'))" \
+    + "attr_UniqueFireIdentifier%20IN%20(%27{}%27))" \
     + "&outFields=*"
 
-WFIGS_CURRENT_INCIDENT_LOCATIONS_ENDPOINT = "WFIGS_Incident_" \
+WFIGS_CURRENT_INCIDENT_LOCATIONS_TEMPLATE = "WFIGS_Incident_" \
     + "Locations_Current" \
     + "/FeatureServer/0/" \
     + "query?f=json&" \
     + "where=(POOState%20IN%20('US-CA'))&outFields=*"
 
 WFIGS_TEST_INCIDENT_LOCATIONS_ENPOINT = "WFIGS_Incident_Locations" \
-    + "/FeatureServer/0/" \
-    + "query?f=json&where=" \
-    + "(FireDiscoveryDateTime%20%3E%3D%20DATE%20'{data_interval_start}'%20" \
-    + "AND" \
-    + "%20FireDiscoveryDateTime%20%3C%3D%20DATE%20'{data_interval_start}')%20" \
-    + "AND" \
-    + "%20(POOState%20IN%20('US-CA'))" \
-    + "&outFields=*"
+    + "/FeatureServer/0/query?f=json&" \
+    + "where=" \
+    + "(POOState%20IN%20(%27US-CA%27))" \
+    + "%20AND%20" \
+    + "(IncidentName%20IN%20(%27DIXIE%27))" \
+    + "%20AND%20(" \
+    + "CreatedOnDateTime_dt%20%3E%3D%20DATE%20%27{data_interval_start}%27" \
+    + "%20AND%20" \
+    + "CreatedOnDateTime_dt%20%3C%3D%20DATE%20%27{data_interval_end}%27" \
+    + ")&outFields=*"
 
-WFIGS_TEST_INCIDENT_PERIMETERS_ENDPOINT = "WFIGS_Interagency_Perimeters" \
+WFIGS_TEST_INCIDENT_PERIMETERS_TEMPLATE = "WFIGS_Interagency_Perimeters" \
     + "/FeatureServer/0/query?f" \
     + "=json&where=(" \
-    + "attr_UniqueFireIdentifier%20IN%20('{}'))" \
+    + "attr_UniqueFireIdentifier%20IN%20(%27{}%27))" \
     + "&outFields=*"
 
-MAPSHARE_FEED_ENDPOINT = "{user}?imei={imei}"
+MAPSHARE_FEED_TEMPLATE = "{user}?imei={imei}"
 
-SEND_MESSAGE_ENDPOINT = "{user}/Map/SendMessageToDevices"
-
-# '2021-CABTU-009347'%2C%20'2021-CABTU-009205'
-
-ENDPOINT_DICT = {
-        'mapshare': MAPSHARE_FEED_ENDPOINT,
-        'airnow': AIRNOW_RADIUS_ENDPOINT,
-        'send_message': SEND_MESSAGE_ENDPOINT,
-        'test_perimeters': WFIGS_TEST_INCIDENT_PERIMETERS_ENDPOINT,
-        'test_locations': WFIGS_TEST_INCIDENT_LOCATIONS_ENPOINT,
-        'current_perimeters': WFIGS_CURRENT_INCIDENT_PERIMETERS_ENDPOINT,
-        'current_locations': WFIGS_CURRENT_INCIDENT_LOCATIONS_ENDPOINT
-}
+SEND_MESSAGE_TEMPLATE = "{user}/Map/SendMessageToDevices"

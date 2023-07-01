@@ -1,28 +1,18 @@
 from helpers.endpoint import Endpoint
-from helpers.elt_funs import elt_wildfire_locations, \
-    elt_wildfire_perimeters, \
-    elt_mapshare_locs, \
-    elt_fire_locs_aqi
-
-ELT_DICT = {
-        'mapshare': elt_mapshare_locs,
-        'airnow': elt_fire_locs_aqi,
-        'test_perimeters': elt_wildfire_perimeters,
-        'test_locations': elt_wildfire_locations,
-        'current_perimeters': elt_wildfire_perimeters,
-        'current_locations': elt_wildfire_locations,
-}
+from helpers.elt_process_pairs import PROCESS_DICT as PAIRS
 
 
 class ELTProcess():
 
     def __init__(self, endpoint_name, http_hook, pg_hook, context, log):
-        self.endpoint = Endpoint(http_hook, endpoint_name)
+
+        pair = PAIRS[endpoint_name]
+        self.endpoint = Endpoint(http_hook, endpoint_name, pair['template'])
         self.pg_conn = pg_hook.get_conn()
         self.pg_cur = self.pg_conn.cursor()
         self.context = context
         self.log = log
-        self.elt_fun = ELT_DICT[self.endpoint.name]
+        self.elt_fun = pair['elt_fun']
 
     def run(self):
 

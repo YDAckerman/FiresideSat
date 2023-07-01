@@ -3,7 +3,7 @@ from airflow import DAG
 from airflow.operators.dummy_operator import DummyOperator
 from airflow.operators.postgres_operator import PostgresOperator
 # from airflow.operators.python_operator import PythonOperator
-from helpers.sql_queries import SqlQueries
+from helpers.sql_queries import SqlQueries as sql
 
 # ##############################################
 #  WARNING
@@ -13,8 +13,6 @@ from helpers.sql_queries import SqlQueries
 # BE SURE YOU HAVE MADE A REAL
 # BACKUP BEFORE YOU RUN!!!!!!!!
 # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-sql = SqlQueries()
 
 # ##############################################
 #  default arguments

@@ -3,7 +3,7 @@ from airflow import DAG
 from airflow.operators.dummy_operator import DummyOperator
 from airflow.operators.postgres_operator import PostgresOperator
 from operators.stage_data_operator import StageDataOperator
-from helpers.sql_queries import SqlQueries
+from helpers.sql_queries import SqlQueries as sql
 
 # ##############################################
 #  default arguments
@@ -33,7 +33,7 @@ create_staging_trip_points = PostgresOperator(
     task_id="create_staging_trip_points",
     dag=dag,
     postgres_conn_id="fireside_prod",
-    sql=SqlQueries.create_staging_trip_points
+    sql=sql.create_staging_trip_points
 )
 
 stage_trip_points = StageDataOperator(
@@ -41,14 +41,14 @@ stage_trip_points = StageDataOperator(
     dag=dag,
     postgres_conn_id="fireside_prod",
     http_conn_id="mapshare_feed",
-    api_endpoint="mapshare_feed_endpoint"
+    endpoint_name="mapshare"
 )
 
 upsert_trip_points = PostgresOperator(
     task_id="upsert_trip_points",
     dag=dag,
     postgres_conn_id="fireside_prod",
-    sql=SqlQueries.upsert_trip_points
+    sql=sql.upsert_trip_points
 )
 
 end_operator = DummyOperator(task_id='Stop_execution', dag=dag)

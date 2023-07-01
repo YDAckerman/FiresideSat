@@ -1,5 +1,5 @@
-from helpers.api_endpoint import ApiEndpoint, make_headers
 from helpers.sql_queries import SqlQueries
+from helpers.header_funs import get_auth_basic
 
 
 class Report:
@@ -10,12 +10,15 @@ class Report:
         self.message = self.format_template(message_template)
         self.save_sql = save_sql
 
-    def send(self, http_hook, test=False):
+    def send(self, endpoint, test=False):
 
         if test:
             return None
 
-        return http_hook.run(**self._make_parameters())
+        endpoint.set_route(mapshare_id=self.report_data['mapshare_id'])
+        headers = get_auth_basic('', self.report_data['mapshare_pw'])
+        json = self._make_json()
+        return endpoint.post(json=json, headers=headers)
 
     def save(self, pg_cur):
         pg_cur.execute(self.save_sql, self.report_data)
@@ -40,16 +43,6 @@ class Report:
 
         return report_data
 
-    def _make_endpoint(self):
-
-        return ApiEndpoint().format_endpoint(
-            "send_message_endpoint",
-            {'mapshare_id': self.report_data['mapshare_id']}
-        )
-
-    def _make_headers(self):
-        return make_headers('', self.report_data['mapshare_pw'])
-
     def _make_json(self):
         return {
             'deviceIds': self.report_data['device_id'],
@@ -57,13 +50,12 @@ class Report:
             'messageText': self.message
         }
 
-    def _make_parameters(self):
+    # def _make_endpoint(self):
 
-        return {
-            'endpoint': self._make_endpoint(),
-            'headers': self._make_headers(),
-            'json': self._make_json()
-            }
+    #     return ApiEndpoint().format_endpoint(
+    #         "send_message_endpoint",
+    #         {'mapshare_id': }
+    #     )
 
 
 class ReportFactory():
@@ -100,8 +92,8 @@ class ReportFactory():
                         "total_acres",
                         "incident_behavior",
                         "incident_name",
-                        "perimeter_lon",
-                        "perimeter_lat",
+                        # "perimeter_lon",
+                        # "perimeter_lat",
                         "centroid_lon",
                         "centroid_lat",
                         "max_aqi",
@@ -114,7 +106,7 @@ class ReportFactory():
             + '{incident_last_update}|'
             + 'acres:{total_acres}|'
             + 'c:{centroid_lat},{centroid_lon}|'
-            + 'e:{perimeter_lat},{perimeter_lon}|'
+            # + 'e:{perimeter_lat},{perimeter_lon}|'
             + 'aqi:{max_aqi}',
             'records_sql': sql.select_user_incidents,
             'save_sql': sql.insert_incident_report
@@ -127,11 +119,11 @@ class ReportFactory():
         self.date_sent = date_sent
 
     def make_report(self, record):
-        self.report = Report(record,
-                             self.report_metadata['columns'],
-                             self.report_metadata['message_template'],
-                             self.report_metadata['save_sql'])
-        return self.report
+
+        return Report(record,
+                      self.report_metadata['columns'],
+                      self.report_metadata['message_template'],
+                      self.report_metadata['save_sql'])
 
     def get_failure_message(self):
         return self.failure_message.format(

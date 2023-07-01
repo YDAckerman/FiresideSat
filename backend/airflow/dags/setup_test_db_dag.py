@@ -3,9 +3,7 @@ from airflow import DAG
 from airflow.operators.dummy_operator import DummyOperator
 from airflow.operators.postgres_operator import PostgresOperator
 # from airflow.operators.python_operator import PythonOperator
-from helpers.sql_queries import SqlQueries
-
-sql = SqlQueries()
+from helpers.sql_queries import SqlQueries as sql
 
 # ##############################################
 #  default arguments

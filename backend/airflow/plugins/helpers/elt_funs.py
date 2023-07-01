@@ -1,5 +1,6 @@
 from airflow.models import Variable
 from helpers.sql_queries import SqlQueries as sql
+from helpers.header_funs import get_auth_basic
 from helpers.extract_funs import extract_incident_attr, \
     extract_perimeter_attr, \
     extract_aqi_attr, \
@@ -8,15 +9,25 @@ import psycopg2.extras
 import json
 
 
-def elt_wildfire_locations(self, endpoint, pg_conn, pg_cur, context, log):
+def elt_wildfire_locations(endpoint, pg_conn, pg_cur, context, log):
 
-    endpoint_response = json.loads(endpoint.run(context).text)
+    start_date = context.get('data_interval_start') \
+                       .to_date_string()
+    end_date = context.get('data_interval_end') \
+                      .to_date_string()
 
-    if endpoint_response:
+    endpoint.set_route(data_interval_start=start_date,
+                       data_interval_end=end_date)
+
+    endpt_resp = json.loads(endpoint.get().text)
+
+    if endpt_resp:
+
+        print(endpt_resp)
 
         # loop through features and
         # load each incident and its perimeter into postgres
-        for feature in endpoint_response['features']:
+        for feature in endpt_resp['features']:
 
             incident_attr = extract_incident_attr(feature)
             pg_cur.execute(sql.insert_staging_incident, incident_attr)
@@ -27,17 +38,18 @@ def elt_wildfire_locations(self, endpoint, pg_conn, pg_cur, context, log):
         log.info(endpoint.warn())
 
 
-def elt_wildfire_perimeters(self, endpoint, pg_conn, pg_cur, context, log):
+def elt_wildfire_perimeters(endpoint, pg_conn, pg_cur, context, log):
 
     pg_cur.execute(sql.select_current_incident_ids)
     records = pg_cur.fetchall()
-    endpoint_response = json.loads(endpoint.run("'%2C%20'".join(records)).text)
+    endpoint.set_route("%27%2C%20%27".join(list(zip(*records))[0]))
+    endpt_resp = json.loads(endpoint.get().text)
 
-    if endpoint_response:
+    if endpt_resp:
 
         # loop through features and
         # load each incident and its perimeter into postgres
-        for feature in endpoint_response['features']:
+        for feature in endpt_resp['features']:
 
             perimeter_attr = extract_perimeter_attr(feature)
             psycopg2.extras.execute_values(pg_cur,
@@ -50,7 +62,7 @@ def elt_wildfire_perimeters(self, endpoint, pg_conn, pg_cur, context, log):
         log.info(endpoint.warn())
 
 
-def elt_mapshare_locs(self, endpoint, pg_conn, pg_cur, context, log):
+def elt_mapshare_locs(endpoint, pg_conn, pg_cur, context, log):
 
     current_date = context.get('data_interval_start')
 
@@ -63,15 +75,14 @@ def elt_mapshare_locs(self, endpoint, pg_conn, pg_cur, context, log):
 
         user_id, trip_id, garmin_imei, mapshare_id, mapshare_pw = record
 
-        headers = endpoint.make_headers(mapshare_id, mapshare_pw)
-        cv = {"mapshare_id": mapshare_id,
-              "garmin_imei": garmin_imei}
-        endpoint_response = endpoint.run(context_vars=cv,
-                                         headers=headers)
-        if endpoint_response:
+        headers = get_auth_basic(mapshare_id, mapshare_pw)
+        endpoint.set_route(mapshare_id=mapshare_id,
+                           garmin_imei=garmin_imei)
+        endpt_resp = endpoint.get(headers=headers)
+        if endpt_resp:
 
             trip_attr = [trip_id] \
-                + extract_feed_attr(endpoint_response)
+                + extract_feed_attr(endpt_resp)
 
             pg_cur.execute(sql.insert_staging_trip_points,
                            trip_attr)
@@ -83,7 +94,7 @@ def elt_mapshare_locs(self, endpoint, pg_conn, pg_cur, context, log):
             log.info(endpoint.warn())
 
 
-def elt_fire_locs_aqi(self, endpoint, pg_conn, pg_cur, context, log):
+def elt_fire_locs_aqi(endpoint, pg_conn, pg_cur, context, log):
 
     pg_cur.execute(sql.select_fire_centroids)
     records = pg_cur.fetchall()
@@ -94,19 +105,15 @@ def elt_fire_locs_aqi(self, endpoint, pg_conn, pg_cur, context, log):
         AQI_RADIUS_MILES = 35
         incident_id, lon, lat = record
 
-        log.info("Inserting aqi staging data for incident: "
-                 + incident_id)
+        endpoint.set_route(lat=lat, lon=lon,
+                           radius_miles=AQI_RADIUS_MILES,
+                           key=Variable.get('airnow_api_key'))
+        endpt_resp = json.loads(endpoint.get().text)
 
-        api_key = Variable.get('airnow_api_key')
-        cv = {'lat': lat, 'lon': lon,
-              'radius_miles': AQI_RADIUS_MILES,
-              'key': api_key}
-        endpoint_response = json.loads(endpoint.run(context_vars=cv).text)
-
-        if endpoint_response:
+        if endpt_resp:
 
             aqi_values = extract_aqi_attr(incident_id,
-                                          endpoint_response)
+                                          endpt_resp)
             psycopg2.extras.execute_values(pg_cur,
                                            sql.insert_staging_aqi,
                                            aqi_values)

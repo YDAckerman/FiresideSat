@@ -188,7 +188,7 @@ class SqlQueries:
     incident_name varchar(256),
     behavior varchar(256),
     total_acres integer,
-    percent_contained smallint
+    percent_contained smallint,
     date_created bigint NOT NULL,
     date_current bigint NOT NULL,
     raw_lon numeric NOT NULL,
@@ -279,9 +279,8 @@ class SqlQueries:
 
     upsert_current_incident = """
     INSERT INTO current_incidents
-    SELECT incident_id, incident_name, behavior, total_acres,
-           percent_contained, date_current, date_created,
-           centroid
+    SELECT incident_id, incident_name, centroid, date_created,
+           date_current, behavior, total_acres, percent_contained
     FROM staging_incidents
     WHERE staging_incidents.incident_id IN
     (SELECT incident_id FROM staging_incidents_updated)
@@ -409,16 +408,64 @@ class SqlQueries:
     # as the last updated point could in fact be outdated.
     # NOTE: THE DATE BOUNDS NEED TO BE CHANGED!!!
     select_user_incidents = """
-    DROP TABLE IF EXISTS points_to_perims;
-    CREATE TEMP TABLE points_to_perims AS
-    SELECT active_trips.trip_id,
-           active_trips.user_id,
-           cp.incident_id,
-           latest_points.last_location,
-           latest_points.last_update,
-           cp.geom AS perimeter_geom,
-           ST_Distance(latest_points.last_location::geography,
-                       cp.geom::geography) AS dist_m_to_perimeter
+
+    -- DROP TABLE IF EXISTS points_to_perims;
+    -- CREATE TEMP TABLE points_to_perims AS
+    -- SELECT active_trips.trip_id,
+    --        active_trips.user_id,
+    --        cp.incident_id,
+    --        latest_points.last_location,
+    --        latest_points.last_update,
+    --        cp.geom AS perimeter_geom,
+    --        ST_Distance(latest_points.last_location::geography,
+    --                    cp.geom::geography) AS dist_m_to_perimeter
+    -- FROM   (SELECT *
+    --         FROM trips
+    --         WHERE trips.start_date <= %(current_date)s
+    --         AND   trips.end_date >= %(current_date)s
+    --        ) active_trips
+    -- JOIN   (SELECT t1.last_location,
+    --                t1.trip_id,
+    --                t2.last_update
+    --         FROM trip_points t1
+    --         JOIN (SELECT trip_id,
+    --                      MAX(date) AS last_update
+    --               FROM trip_points
+    --               GROUP BY trip_id) t2
+    --         ON t1.trip_id = t2.trip_id
+    --         AND t1.date = t2.last_update
+    --        ) latest_points
+    -- ON   active_trips.trip_id = latest_points.trip_id
+    -- -- these are here because of some testing points
+    -- -- they are redundant otherwise.
+    -- AND  latest_points.last_update >= active_trips.start_date
+    -- AND  latest_points.last_update <= active_trips.end_date
+    -- JOIN current_perimeters cp
+    -- ON   ST_DWithin(latest_points.last_location::geography,
+    --                 cp.geom::geography,
+    --                 %(max_distance_m)s --meters
+    -- );
+
+    DROP TABLE IF EXISTS user_incidents;
+    CREATE TEMP TABLE user_incidents AS
+    SELECT active_trips.user_id,
+           ci.incident_id,
+           to_timestamp(ci.date_current / 1000) AS incident_last_update,
+           ca.aqi_date AS aqi_last_update,
+           CASE WHEN ci.total_acres::varchar = ''
+                THEN '?'
+                ELSE ci.total_acres::varchar
+           END
+           AS total_acres,
+           ci.behavior AS incident_behavior,
+           ci.incident_name,
+           round(ST_X(ST_Transform(ci.centroid, 4326))::numeric, 4) AS
+           centroid_lon,
+           round(ST_Y(ST_Transform(ci.centroid, 4326))::numeric, 4) AS
+           centroid_lat,
+           ca.max_aqi,
+           ST_X(ST_Transform(ca.geom, 4326)) AS aqi_obs_lon,
+           ST_Y(ST_Transform(ca.geom, 4326)) AS aqi_obs_lat
     FROM   (SELECT *
             FROM trips
             WHERE trips.start_date <= %(current_date)s
@@ -431,7 +478,7 @@ class SqlQueries:
             JOIN (SELECT trip_id,
                          MAX(date) AS last_update
                   FROM trip_points
-                  GROUP BY trip_id) t2
+                    GROUP BY trip_id) t2
             ON t1.trip_id = t2.trip_id
             AND t1.date = t2.last_update
            ) latest_points
@@ -440,49 +487,11 @@ class SqlQueries:
     -- they are redundant otherwise.
     AND  latest_points.last_update >= active_trips.start_date
     AND  latest_points.last_update <= active_trips.end_date
-    JOIN current_perimeters cp
+    JOIN current_incidents ci
     ON   ST_DWithin(latest_points.last_location::geography,
-                    cp.geom::geography,
+                    ci.centroid::geography,
                     %(max_distance_m)s --meters
-    );
-
-    DROP TABLE IF EXISTS user_incidents;
-    CREATE TEMP TABLE user_incidents AS
-    SELECT -- ptp.trip_id,
-           ptp.user_id,
-           ci.incident_id,
-           to_timestamp(ci.date_current / 1000) AS incident_last_update,
-           ca.aqi_date AS aqi_last_update,
-           CASE WHEN ci.total_acres::varchar = ''
-                THEN '?'
-                ELSE ci.total_acres::varchar
-           END
-           AS total_acres,
-           ci.behavior AS incident_behavior,
-           ci.incident_name,
-           -- md.dist_m_min AS dist_m_to_perimeter,
-           round(ST_X(ST_Transform(ptp.perimeter_geom, 4326))::numeric, 4) AS perimeter_lon,
-           round(ST_Y(ST_Transform(ptp.perimeter_geom, 4326))::numeric, 4) AS perimeter_lat,
-           -- ST_Distance(ptp.last_location::geography,
-           --            ci.centroid::geography) AS dist_m_to_centroid,
-           round(ST_X(ST_Transform(ci.centroid, 4326))::numeric, 4) AS centroid_lon,
-           round(ST_Y(ST_Transform(ci.centroid, 4326))::numeric, 4) AS centroid_lat,
-           ca.max_aqi,
-           ST_X(ST_Transform(ca.geom, 4326)) AS aqi_obs_lon,
-           ST_Y(ST_Transform(ca.geom, 4326)) AS aqi_obs_lat
-    FROM points_to_perims ptp
-    JOIN (SELECT incident_id,
-                 user_id,
-                 trip_id,
-                 MIN(dist_m_to_perimeter) AS dist_m_min
-          FROM points_to_perims
-          GROUP BY incident_id, user_id, trip_id
-          ) md
-    ON  ptp.incident_id = md.incident_id
-    AND ptp.user_id = md.user_id
-    AND ptp.trip_id = md.trip_id
-    AND ptp.dist_m_to_perimeter = md.dist_m_min
-    JOIN current_incidents ci ON md.incident_id = ci.incident_id
+                    )
     JOIN (
           SELECT c1.incident_id, c1.geom,
                  c1.date + ((c1.hour)::varchar(256) || ' hour')::interval
@@ -496,7 +505,59 @@ class SqlQueries:
           ON c1.incident_id = c2.incident_id
           AND c1.aqi = c2.max_aqi
     ) ca
-    ON md.incident_id = ca.incident_id;
+    ON ci.incident_id = ca.incident_id;
+
+    -- DROP TABLE IF EXISTS user_incidents;
+    -- CREATE TEMP TABLE user_incidents AS
+    -- SELECT -- ptp.trip_id,
+    --        ptp.user_id,
+    --        ci.incident_id,
+    --        to_timestamp(ci.date_current / 1000) AS incident_last_update,
+    --        ca.aqi_date AS aqi_last_update,
+    --        CASE WHEN ci.total_acres::varchar = ''
+    --             THEN '?'
+    --             ELSE ci.total_acres::varchar
+    --        END
+    --        AS total_acres,
+    --        ci.behavior AS incident_behavior,
+    --        ci.incident_name,
+    --        -- md.dist_m_min AS dist_m_to_perimeter,
+    --        round(ST_X(ST_Transform(ptp.perimeter_geom, 4326))::numeric, 4) AS perimeter_lon,
+    --        round(ST_Y(ST_Transform(ptp.perimeter_geom, 4326))::numeric, 4) AS perimeter_lat,
+    --        -- ST_Distance(ptp.last_location::geography,
+    --        --            ci.centroid::geography) AS dist_m_to_centroid,
+    --        round(ST_X(ST_Transform(ci.centroid, 4326))::numeric, 4) AS centroid_lon,
+    --        round(ST_Y(ST_Transform(ci.centroid, 4326))::numeric, 4) AS centroid_lat,
+    --        ca.max_aqi,
+    --        ST_X(ST_Transform(ca.geom, 4326)) AS aqi_obs_lon,
+    --        ST_Y(ST_Transform(ca.geom, 4326)) AS aqi_obs_lat
+    -- FROM points_to_perims ptp
+    -- JOIN (SELECT incident_id,
+    --              user_id,
+    --              trip_id,
+    --              MIN(dist_m_to_perimeter) AS dist_m_min
+    --       FROM points_to_perims
+    --       GROUP BY incident_id, user_id, trip_id
+    --       ) md
+    -- ON  ptp.incident_id = md.incident_id
+    -- AND ptp.user_id = md.user_id
+    -- AND ptp.trip_id = md.trip_id
+    -- AND ptp.dist_m_to_perimeter = md.dist_m_min
+    -- JOIN current_incidents ci ON md.incident_id = ci.incident_id
+    -- JOIN (
+    --       SELECT c1.incident_id, c1.geom,
+    --             c1.date + ((c1.hour)::varchar(256) || ' hour')::interval
+    --             AS aqi_date,
+    --             c2.max_aqi
+    --      FROM current_aqi c1
+    --      JOIN (
+    --            SELECT incident_id, MAX(aqi) AS max_aqi
+    --            FROM current_aqi
+    --            GROUP BY incident_id) c2
+    --      ON c1.incident_id = c2.incident_id
+    --      AND c1.aqi = c2.max_aqi
+    -- ) ca
+    -- ON md.incident_id = ca.incident_id;
 
     -- filter out any messages that have already been
     -- sent to a specific user
