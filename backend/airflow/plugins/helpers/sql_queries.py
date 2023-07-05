@@ -57,7 +57,7 @@ class SqlQueries:
     CREATE TABLE IF NOT EXISTS incident_reports (
     user_id                integer        NOT NULL,
     incident_id            varchar(256)   NOT NULL,
-    incident_last_update   timestamp         NOT NULL,
+    incident_last_update   timestamp      NOT NULL,
     aqi_last_update        timestamp      NOT NULL
     );
 
@@ -267,14 +267,6 @@ class SqlQueries:
     delete_aqi_outdated = """
     DELETE FROM current_aqi
     WHERE incident_id IN (SELECT incident_id FROM staging_incidents_outdated);
-    DELETE FROM current_aqi ca1
-    WHERE EXISTS (
-          SELECT *
-          FROM current_aqi ca2
-          WHERE ca2.incident_id = ca1.incident_id
-          AND ca2.date >= ca1.date
-          AND ca2.hour > ca1.hour
-    );
     """
 
     upsert_current_incident = """
@@ -293,10 +285,12 @@ class SqlQueries:
     percent_contained = EXCLUDED.percent_contained;
     """
 
-    # These values are based on geom from current_incidents
     upsert_current_aqi = """
+    DELETE FROM current_aqi WHERE incident_id IN
+    (SELECT DISTINCT incident_id FROM staging_aqi);
     INSERT INTO current_aqi
-    SELECT incident_id, date, hour, geom, aqi FROM staging_aqi;
+    SELECT incident_id, date, hour, geom, aqi
+    FROM staging_aqi;
     """
 
     upsert_current_perimeter = """
@@ -388,10 +382,15 @@ class SqlQueries:
     FROM   users
     JOIN   trips ON users.user_id = trips.user_id
     JOIN   devices ON trips.device_id = devices.device_id
-    JOIN   trip_state_reports tsr ON users.user_id = tsr.user_id
-    AND    trips.trip_id = tsr.trip_id
-    WHERE  trips.start_date::date = (%(current_date)s)::date
-    OR     trips.end_date::date = (%(current_date)s)::date;
+    LEFT JOIN   trip_state_reports tsr ON users.user_id = tsr.user_id
+    AND                              trips.trip_id = tsr.trip_id
+    AND                              (trips.start_date = tsr.date_sent
+    OR                                trips.end_date = tsr.date_sent)
+    WHERE  (trips.start_date::date = (%(current_date)s)::date
+    OR     trips.end_date::date = (%(current_date)s)::date)
+    AND    (tsr.user_id IS NULL
+    OR      tsr.trip_id IS NULL
+    OR      tsr.date_sent IS NULL);
     """
 
     select_active_users = """
@@ -404,10 +403,102 @@ class SqlQueries:
     AND    trips.end_date >= %(current_date)s;
     """
 
-    # add a check that last_update is within trip range
-    # as the last updated point could in fact be outdated.
     # NOTE: THE DATE BOUNDS NEED TO BE CHANGED!!!
     select_user_incidents = """
+    DROP TABLE IF EXISTS user_incidents;
+    CREATE TEMP TABLE user_incidents AS
+    SELECT active_trips.user_id,
+           ci.incident_id,
+           to_timestamp(ci.date_current / 1000) AS incident_last_update,
+           ca.aqi_date AS aqi_last_update,
+           CASE WHEN ci.total_acres::varchar = ''
+                THEN '?'
+                ELSE ci.total_acres::varchar
+           END
+           AS total_acres,
+           ci.behavior AS incident_behavior,
+           ci.incident_name,
+           round(ST_Distance(latest_points.last_location::geography,
+                       ci.centroid::geography)::numeric, 2) AS dist_m_to_center,
+           round(ST_X(ST_Transform(ci.centroid, 4326))::numeric, 4) AS
+           centroid_lon,
+           round(ST_Y(ST_Transform(ci.centroid, 4326))::numeric, 4) AS
+           centroid_lat,
+           ca.max_aqi,
+           ST_X(ST_Transform(ca.geom, 4326)) AS aqi_obs_lon,
+           ST_Y(ST_Transform(ca.geom, 4326)) AS aqi_obs_lat
+    FROM   (SELECT *
+            FROM trips
+            WHERE trips.start_date <= %(current_date)s
+            AND   trips.end_date >= %(current_date)s
+           ) active_trips
+    JOIN   (SELECT t1.last_location,
+                   t1.trip_id,
+                   t2.last_update
+            FROM trip_points t1
+            JOIN (SELECT trip_id,
+                         MAX(date) AS last_update
+                  FROM trip_points
+                    GROUP BY trip_id) t2
+            ON t1.trip_id = t2.trip_id
+            AND t1.date = t2.last_update
+           ) latest_points
+    ON   active_trips.trip_id = latest_points.trip_id
+    -- these are here because of some testing points
+    -- they are redundant otherwise.
+    -- AND  latest_points.last_update >= active_trips.start_date
+    -- AND  latest_points.last_update <= active_trips.end_date
+    JOIN current_incidents ci
+    ON   ST_DWithin(latest_points.last_location::geography,
+                    ci.centroid::geography,
+                    %(max_distance_m)s --meters
+                    )
+    JOIN (
+          SELECT c1.incident_id, c1.geom,
+                 c1.date + ((c1.hour)::varchar(256) || ' hour')::interval
+                 AS aqi_date,
+                 c2.max_aqi
+          FROM current_aqi c1
+          JOIN (
+                SELECT incident_id, MAX(aqi) AS max_aqi
+                FROM current_aqi
+                GROUP BY incident_id) c2
+          ON c1.incident_id = c2.incident_id
+          AND c1.aqi = c2.max_aqi
+    ) ca
+    ON ci.incident_id = ca.incident_id;
+
+    -- CREATE TEMP TABLE incident_filter AS
+    -- SELECT user_id, incident_id
+    -- FROM user_incidents
+    -- ORDER BY max_aqi DESC
+    -- LIMIT 1;
+
+    DROP TABLE IF EXISTS user_messages;
+    CREATE TEMP TABLE user_messages AS
+    SELECT DISTINCT ui.*, u.mapshare_id, u.mapshare_pw, d.garmin_device_id
+    FROM user_incidents ui
+    LEFT JOIN incident_reports ir
+    ON   ui.user_id = ir.user_id
+    AND  ui.incident_id = ir.incident_id
+    AND  ui.incident_last_update <= ir.incident_last_update
+    JOIN users u ON ui.user_id = u.user_id
+    JOIN devices d ON ui.user_id = d.user_id
+    WHERE (ir.user_id IS NULL)
+    OR     (ui.aqi_last_update >= (ir.aqi_last_update
+                                        + interval '12 hour'));
+
+    -- Limit the number of messages.
+    SELECT um.*
+    FROM (SELECT um.*,
+                 row_number() over (partition by user_id
+                                    order by incident_last_update, max_aqi desc
+                                   ) as row_num
+          FROM user_messages um) um
+    WHERE row_num <= 2;
+    """
+
+    """
 
     -- DROP TABLE IF EXISTS points_to_perims;
     -- CREATE TEMP TABLE points_to_perims AS
@@ -561,7 +652,7 @@ class SqlQueries:
 
     -- filter out any messages that have already been
     -- sent to a specific user
-    SELECT ui.*, u.mapshare_id, u.mapshare_pw, d.garmin_device_id
+    SELECT DISTINCT ui.*, u.mapshare_id, u.mapshare_pw, d.garmin_device_id
     FROM user_incidents ui
     LEFT JOIN incident_reports ir
     ON   ui.user_id = ir.user_id
@@ -576,4 +667,6 @@ class SqlQueries:
                                         + interval '12 hour'))
     ORDER BY ui.user_id, ui.max_aqi DESC
     LIMIT 2;
-    """
+
+
+"""

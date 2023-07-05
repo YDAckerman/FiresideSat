@@ -6,7 +6,7 @@ AIRNOW_RADIUS_TEMPLATE = "?format=application/json" \
     + "&API_KEY={key}"
 
 WFIGS_CURRENT_INCIDENT_PERIMETERS_TEMPLATE = "WFIGS_Interagency_" \
-    + "Perimeters_Current/" \
+    + "Perimeters_Current" \
     + "/FeatureServer/0/query?f" \
     + "=json&where=(" \
     + "attr_UniqueFireIdentifier%20IN%20(%27{}%27))" \

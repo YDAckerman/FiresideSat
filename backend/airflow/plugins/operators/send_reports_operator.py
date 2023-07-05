@@ -2,7 +2,7 @@ from airflow.hooks.postgres_hook import PostgresHook
 from airflow.hooks.http_hook import HttpHook
 from airflow.models import BaseOperator
 from airflow.utils.decorators import apply_defaults
-from helpers.comms import Comms
+from helpers.comms import CommsProcess
 
 
 class SendReportsOperator(BaseOperator):
@@ -25,5 +25,5 @@ class SendReportsOperator(BaseOperator):
         http_hook = HttpHook(method='POST',
                              http_conn_id=self.http_conn_id)
 
-        Comms(http_hook, pg_hook) \
+        CommsProcess(http_hook, pg_hook) \
             .send_messages(self.message_type, context, self.log)

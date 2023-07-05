@@ -18,10 +18,11 @@ default_args = {
 # ##############################################
 
 dag = DAG('prod_incident_report_dag',
-          start_date=datetime(2023, 6, 20),
+          start_date=datetime(2023, 7, 4, hour=17),
           default_args=default_args,
           description='Send Incident Reports',
-          schedule=timedelta(hours=12))
+          schedule=timedelta(hours=12),
+          catchup=False)
 
 start_operator = DummyOperator(task_id='Begin_Incident_'
                                + 'Report_Dag_Execution',

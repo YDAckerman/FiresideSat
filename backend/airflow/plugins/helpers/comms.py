@@ -8,13 +8,13 @@ import json
 # from selenium.webdriver.common.by import By
 # from selenium.webdriver.support import expected_conditions as EC
 
-MAX_DIST_M = 1220000
+# MAX_DIST_M = 1220000
+MAX_DIST_M = 241401
 
 
 class CommsProcess():
 
     def __init__(self, http_hook, pg_hook):
-        print("using comms")
         self.http_hook = http_hook
         self.pg_hook = pg_hook
 
@@ -27,7 +27,7 @@ class CommsProcess():
         pg_conn = self.pg_hook.get_conn()
         pg_cur = pg_conn.cursor()
 
-        current_date = context.get('data_interval_start')
+        current_date = context.get('ds')
 
         report_factory = ReportFactory(report_type, current_date)
 

@@ -19,8 +19,8 @@ default_args = {
 # ##############################################
 
 dag = DAG('test_trip_state_report_dag',
-          start_date=datetime(2021, 5, 2),
-          end_date=datetime(2021, 5, 2),
+          start_date=datetime(2021, 7, 14),
+          end_date=datetime(2021, 7, 14),
           default_args=default_args,
           description='Test send trip start/stop messages',
           schedule=timedelta(days=1),

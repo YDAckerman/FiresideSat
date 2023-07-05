@@ -15,15 +15,18 @@ default_args = {
     'retry_delay': timedelta(minutes=3)
 }
 
+POSTGRES_DB = "fireside_prod"
+
 # ##############################################
 #  dag instantiation
 # ##############################################
 
 dag = DAG('prod_aqi_dag',
-          start_date=datetime(2023, 6, 20),
+          start_date=datetime(2023, 7, 4),
           default_args=default_args,
           description='ELT for AQI Conditions',
-          schedule_interval='@hourly'
+          schedule_interval='@hourly',
+          catchup=False
           )
 
 # ##############################################
@@ -37,14 +40,14 @@ start_operator = DummyOperator(task_id='Begin_AQI_Dag_Execution',
 create_staging_aqi = PostgresOperator(
     task_id="create_staging_aqi",
     dag=dag,
-    postgres_conn_id="fireside_prod",
+    postgres_conn_id=POSTGRES_DB,
     sql=sql.create_staging_aqi
 )
 
 stage_aqi_data_operator = StageDataOperator(
     task_id="stage_aqi_data",
     dag=dag,
-    postgres_conn_id="fireside_prod",
+    postgres_conn_id=POSTGRES_DB,
     http_conn_id="airnow",
     endpoint_name="airnow"
 )
@@ -52,14 +55,14 @@ stage_aqi_data_operator = StageDataOperator(
 upsert_current_operator = PostgresOperator(
     task_id="upsert_current",
     dag=dag,
-    postgres_conn_id="fireside_prod",
+    postgres_conn_id=POSTGRES_DB,
     sql=sql.upsert_current_aqi
 )
 
 delete_outdated_operator = PostgresOperator(
     task_id="delete_outdated",
     dag=dag,
-    postgres_conn_id="fireside_prod",
+    postgres_conn_id=POSTGRES_DB,
     sql=sql.delete_aqi_outdated
 )
 

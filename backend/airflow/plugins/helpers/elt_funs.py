@@ -7,17 +7,17 @@ from helpers.extract_funs import extract_incident_attr, \
     extract_feed_attr
 import psycopg2.extras
 import json
+import pendulum
 
 
 def elt_wildfire_locations(endpoint, pg_conn, pg_cur, context, log):
 
-    start_date = context.get('data_interval_start') \
-                       .to_date_string()
-    end_date = context.get('data_interval_end') \
-                      .to_date_string()
+    start_date = context.get('ds')
 
-    endpoint.set_route(data_interval_start=start_date,
-                       data_interval_end=end_date)
+    end_date = pendulum.from_format(start_date, "YYYY-MM-DD").add(days=1)
+
+    endpoint.set_route(ds=start_date,
+                       data_interval_end=end_date.to_date_string())
 
     endpt_resp = json.loads(endpoint.get().text)
 
@@ -38,33 +38,39 @@ def elt_wildfire_locations(endpoint, pg_conn, pg_cur, context, log):
         log.info(endpoint.warn())
 
 
+# TODO: this is broken for current perimeters fires
 def elt_wildfire_perimeters(endpoint, pg_conn, pg_cur, context, log):
 
     pg_cur.execute(sql.select_current_incident_ids)
     records = pg_cur.fetchall()
-    endpoint.set_route("%27%2C%20%27".join(list(zip(*records))[0]))
-    endpt_resp = json.loads(endpoint.get().text)
 
-    if endpt_resp:
+    # I would much prefer to batch request these, but as
+    # some fires don't have perimeter data, it looks like
+    # the entire request will fail if I do.
+    for record in records:
 
-        # loop through features and
-        # load each incident and its perimeter into postgres
-        for feature in endpt_resp['features']:
+        endpoint.set_route(record[0])
+        endpt_resp = json.loads(endpoint.get().text)
 
-            perimeter_attr = extract_perimeter_attr(feature)
-            psycopg2.extras.execute_values(pg_cur,
-                                           sql.insert_staging_perimeter,
-                                           perimeter_attr)
-            pg_conn.commit()
+        if endpt_resp:
 
-    else:
+            # loop through features and
+            # load each incident and its perimeter into postgres
+            for feature in endpt_resp['features']:
 
-        log.info(endpoint.warn())
+                perimeter_attr = extract_perimeter_attr(feature)
+                psycopg2.extras.execute_values(pg_cur,
+                                               sql.insert_staging_perimeter,
+                                               perimeter_attr)
+                pg_conn.commit()
+
+        else:
+            log.info(endpoint.warn())
 
 
 def elt_mapshare_locs(endpoint, pg_conn, pg_cur, context, log):
 
-    current_date = context.get('data_interval_start')
+    current_date = context.get('ds')
 
     pg_cur.execute(sql.select_active_users,
                    {'current_date': current_date})
@@ -76,8 +82,7 @@ def elt_mapshare_locs(endpoint, pg_conn, pg_cur, context, log):
         user_id, trip_id, garmin_imei, mapshare_id, mapshare_pw = record
 
         headers = get_auth_basic(mapshare_id, mapshare_pw)
-        endpoint.set_route(mapshare_id=mapshare_id,
-                           garmin_imei=garmin_imei)
+        endpoint.set_route(user=mapshare_id, imei=garmin_imei)
         endpt_resp = endpoint.get(headers=headers)
         if endpt_resp:
 
@@ -114,6 +119,7 @@ def elt_fire_locs_aqi(endpoint, pg_conn, pg_cur, context, log):
 
             aqi_values = extract_aqi_attr(incident_id,
                                           endpt_resp)
+            print(aqi_values)
             psycopg2.extras.execute_values(pg_cur,
                                            sql.insert_staging_aqi,
                                            aqi_values)

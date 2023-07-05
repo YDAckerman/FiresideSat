@@ -19,10 +19,11 @@ default_args = {
 # ##############################################
 
 dag = DAG('prod_trip_state_report_dag',
-          start_date=datetime(2023, 6, 20),
+          start_date=datetime(2023, 7, 5),
           default_args=default_args,
           description='Send trip start/stop messages',
-          schedule='@daily'
+          schedule='@daily',
+          catchup=False
           )
 
 start_operator = DummyOperator(task_id='Begin_Test_Trip_State_'

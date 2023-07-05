@@ -15,7 +15,7 @@ class Report:
         if test:
             return None
 
-        endpoint.set_route(mapshare_id=self.report_data['mapshare_id'])
+        endpoint.set_route(user=self.report_data['mapshare_id'])
         headers = get_auth_basic('', self.report_data['mapshare_pw'])
         json = self._make_json()
         return endpoint.post(json=json, headers=headers)
@@ -60,8 +60,10 @@ class Report:
 
 class ReportFactory():
 
+    current_report = None
+
     failure_message = "{report_type} message failed to send " \
-        + "to {user_id} on {current_date}"
+        + "to user no. {user_id} on {current_date}"
 
     sql = SqlQueries()
 
@@ -92,8 +94,7 @@ class ReportFactory():
                         "total_acres",
                         "incident_behavior",
                         "incident_name",
-                        # "perimeter_lon",
-                        # "perimeter_lat",
+                        "dist_m_to_center",
                         "centroid_lon",
                         "centroid_lat",
                         "max_aqi",
@@ -101,12 +102,13 @@ class ReportFactory():
                         "aqi_obs_lat",
                         "mapshare_id",
                         "mapshare_pw",
-                        "device_id"],
+                        "device_id",
+                        "row_num"],
             'message_template': '{incident_name}|'
-            + '{incident_last_update}|'
-            + 'acres:{total_acres}|'
+            + 'u:{incident_last_update}|'
+            + 's:{total_acres}|'
             + 'c:{centroid_lat},{centroid_lon}|'
-            # + 'e:{perimeter_lat},{perimeter_lon}|'
+            + 'd:{dist_m_to_center}|'
             + 'aqi:{max_aqi}',
             'records_sql': sql.select_user_incidents,
             'save_sql': sql.insert_incident_report
@@ -119,16 +121,20 @@ class ReportFactory():
         self.date_sent = date_sent
 
     def make_report(self, record):
-
-        return Report(record,
-                      self.report_metadata['columns'],
-                      self.report_metadata['message_template'],
-                      self.report_metadata['save_sql'])
+        self.current_report = Report(record,
+                                     self.report_metadata['columns'],
+                                     self.report_metadata['message_template'],
+                                     self.report_metadata['save_sql'])
+        return self.current_report
 
     def get_failure_message(self):
+
+        if not self.current_report:
+            raise ValueError("No report")
+
         return self.failure_message.format(
             report_type=self.report_type,
-            user_id=self.report.get_recipient(),
+            user_id=self.current_report.get_recipient(),
             current_date=self.date_sent)
 
     def get_records_sql(self):
