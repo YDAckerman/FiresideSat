@@ -181,7 +181,7 @@ class SqlQueries:
     DROP TABLE IF EXISTS staging_incidents;
     DROP TABLE IF EXISTS staging_perimeters;
     DROP TABLE IF EXISTS staging_incidents_updated;
-    DROP TABLE IF EXISTS staging_incidents_outdated;
+    -- DROP TABLE IF EXISTS staging_incidents_outdated;
 
     CREATE TABLE IF NOT EXISTS staging_incidents (
     incident_id varchar(256) PRIMARY KEY,
