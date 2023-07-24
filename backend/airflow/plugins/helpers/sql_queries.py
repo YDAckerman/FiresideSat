@@ -491,9 +491,11 @@ class SqlQueries:
     -- Limit the number of messages.
     SELECT um.*
     FROM (SELECT um.*,
-                 row_number() over (partition by user_id
-                                    order by incident_last_update, max_aqi desc
-                                   ) as row_num
+                 row_number() OVER (PARTITION BY user_id
+                                    ORDER BY incident_last_update DESC,
+                                             total_acres DESC,
+                                             max_aqi DESC
+                                   ) AS row_num
           FROM user_messages um) um
     WHERE row_num <= 2;
     """

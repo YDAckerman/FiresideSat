@@ -9,7 +9,7 @@ import json
 # from selenium.webdriver.support import expected_conditions as EC
 
 # MAX_DIST_M = 1220000
-MAX_DIST_M = 241401
+MAX_DIST_M = 354055
 
 
 class CommsProcess():
