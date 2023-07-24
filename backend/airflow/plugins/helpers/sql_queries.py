@@ -493,8 +493,8 @@ class SqlQueries:
     FROM (SELECT um.*,
                  row_number() OVER (PARTITION BY user_id
                                     ORDER BY incident_last_update DESC,
-                                             total_acres DESC,
-                                             max_aqi DESC
+                                             total_acres DESC NULLS LAST,
+                                             max_aqi DESC NULLS LAST
                                    ) AS row_num
           FROM user_messages um) um
     WHERE row_num <= 2;
