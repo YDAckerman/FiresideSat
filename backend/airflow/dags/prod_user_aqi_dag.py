@@ -21,10 +21,10 @@ POSTGRES_DB = "fireside_prod"
 #  dag instantiation
 # ##############################################
 
-dag = DAG('prod_aqi_dag',
+dag = DAG('prod_user_aqi_dag',
           start_date=datetime(2023, 7, 4),
           default_args=default_args,
-          description='ELT for AQI Conditions',
+          description='ELT for User AQI Conditions',
           schedule_interval='@hourly',
           catchup=False
           )
@@ -38,7 +38,7 @@ start_operator = DummyOperator(task_id='Begin_AQI_Dag_Execution',
 
 
 create_staging_aqi = PostgresOperator(
-    task_id="create_staging_aqi",
+    task_id="create_staging_user_aqi",
     dag=dag,
     postgres_conn_id=POSTGRES_DB,
     sql=sql.create_staging_aqi
@@ -49,21 +49,14 @@ stage_aqi_data_operator = StageDataOperator(
     dag=dag,
     postgres_conn_id=POSTGRES_DB,
     http_conn_id="airnow",
-    endpoint_name="airnow_fire_locs"
+    endpoint_name="airnow_trip_points"
 )
 
 upsert_current_operator = PostgresOperator(
     task_id="upsert_current",
     dag=dag,
     postgres_conn_id=POSTGRES_DB,
-    sql=sql.upsert_current_aqi
-)
-
-delete_outdated_operator = PostgresOperator(
-    task_id="delete_outdated",
-    dag=dag,
-    postgres_conn_id=POSTGRES_DB,
-    sql=sql.delete_aqi_outdated
+    sql=sql.upsert_trip_points_aqi
 )
 
 end_operator = DummyOperator(task_id='Stop_execution', dag=dag)
@@ -78,6 +71,4 @@ create_staging_aqi >> stage_aqi_data_operator
 
 stage_aqi_data_operator >> upsert_current_operator
 
-upsert_current_operator >> delete_outdated_operator
-
-delete_outdated_operator >> end_operator
+upsert_current_operator >> end_operator

@@ -49,7 +49,7 @@ stage_aqi_data_operator = StageDataOperator(
     dag=dag,
     postgres_conn_id="fireside",
     http_conn_id="airnow",
-    endpoint_name="airnow"
+    endpoint_name="airnow_fire_locs"
 )
 
 upsert_current_operator = PostgresOperator(

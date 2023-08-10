@@ -2,40 +2,28 @@
 
 ## About
 
-FiresideSat is a tool to connect my (your?) garmin in-reach mini to various wildfire-related data.
+FiresideSat is a tool to send wildfire and AQI data your (garmin)
+satellite phone. 
 
-## Current Goals
+The program's tasks are broken down into directed acyclic graphs
+(DAGs) that are managed by Apache Airflow. The main tasks involve
+adding and managing data in a postgreSQL database and sending reports
+based on those data to the end user's phone. 
 
-As I was recently reminded, fire perimeters are only part of the
-problem when one is off-grid. Smoke and air-quality tracking (and
-prediction) are also essential.  
+As of now, everything runs locally. When I go on (backpacking) trips,
+I run docker-compose up -d, turn on the 'production' DAGs in the
+airflow web gui, and then leave my computer running for the duration
+of the trip.
 
-## Updates
+In the near future, I'd like to add a frontend to support
+adding/removing trips and users; and a way to easily deploy the
+program to run in the cloud. 
 
-02-20-2023 - a prototype for the 'data backend' is working. Lots of different tests to run. Certainly not robust. Expected downtime this week for one of the apis - might be nice to see how the thing breaks. Next: connecting to garmin device (also via airflow?). Then user back-end and front-end. 
+## Installation
 
-08-04-2022 - The current design of the project won't work because, as
-far as I can tell, both twilio and the sat phone will only have
-conversations if they can initiate them. Instead I'm going to take a
-different approach using Garmin's MapShare feature. This won't be as
-responsive, since I'll have to be checking their periodically for
-updates, as opposed to running a lambda function on an sms
-trigger. But that will probably be fine enough. From a cost
-perspective, this might actually be better, as messages FiresideSat
-sends will be billed on Garmin's end for that user. I won't get
-charged for twilio messages and I'll be able to keep aws resource
-usage 'fixed' per user. 
+Coming soon
 
-09-04-2022 - The new approach is taking shape. I'll end up using a
-chron job (I think) to monitor the device's KML feed and use the feed
-information to make decisions regard what information to send back to
-the device. I feel like the feed should be reporting more events, but
-so far, I've only seen "Tracking turned on" and "Tracking turned off"
-(despite having sent messages and set waypoints during tracking). It's
-minimal and not great, but that means I can just do fire monitoring
-while tracking is turned on (being careful not to repeat messages) and
-stop when tracking is turned off. I guess I can live with that until I
-figure out how to get the messages sent to the MapShare site, which so
-far has eluded me. 
+## Usage
 
-testing
+Coming soon
+

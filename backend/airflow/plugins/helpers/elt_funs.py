@@ -99,29 +99,24 @@ def elt_mapshare_locs(endpoint, pg_conn, pg_cur, context, log):
             log.info(endpoint.warn())
 
 
-def elt_fire_locs_aqi(endpoint, pg_conn, pg_cur, context, log):
-
-    pg_cur.execute(sql.select_fire_centroids)
-    records = pg_cur.fetchall()
+def elt_aqi(endpoint, pg_conn, pg_cur, log, records, sql_query):
 
     for record in records:
 
-        # TODO: DIST _should_ change depending on the fire (record)
-        AQI_RADIUS_MILES = 35
-        incident_id, lon, lat = record
+        spatial_object_id, lon, lat, rad = record
 
         endpoint.set_route(lat=lat, lon=lon,
-                           radius_miles=AQI_RADIUS_MILES,
+                           radius_miles=rad,
                            key=Variable.get('airnow_api_key'))
         endpt_resp = json.loads(endpoint.get().text)
 
         if endpt_resp:
 
-            aqi_values = extract_aqi_attr(incident_id,
+            aqi_values = extract_aqi_attr(spatial_object_id,
                                           endpt_resp)
-            print(aqi_values)
+            # print(aqi_values)
             psycopg2.extras.execute_values(pg_cur,
-                                           sql.insert_staging_aqi,
+                                           sql_query,
                                            aqi_values)
 
             pg_conn.commit()
@@ -129,3 +124,22 @@ def elt_fire_locs_aqi(endpoint, pg_conn, pg_cur, context, log):
         else:
 
             log.info(endpoint.warn())
+
+
+def elt_fire_locs_aqi(endpoint, pg_conn, pg_cur, context, log):
+
+    pg_cur.execute(sql.select_fire_centroids)
+    records = pg_cur.fetchall()
+
+    elt_aqi(endpoint, pg_conn, pg_cur,
+            log, records, sql.insert_staging_aqi)
+
+
+def elt_trip_points_aqi(endpoint, pg_conn, pg_cur, context, log):
+
+    pg_cur.execute(sql.select_latest_points,
+                   {'current_date': context.get('ds')})
+    records = pg_cur.fetchall()
+
+    elt_aqi(endpoint, pg_conn, pg_cur,
+            log, records, sql.insert_staging_trip_points_aqi)

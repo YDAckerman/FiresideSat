@@ -46,6 +46,7 @@ class SqlQueries:
     drop_trip_tables = """
     DROP TABLE IF EXISTS trips;
     DROP TABLE IF EXISTS trip_points;
+    DROP TABLE IF EXISTS trip_points_aqi;
     """
 
     drop_report_tables = """
@@ -113,6 +114,14 @@ class SqlQueries:
     last_location      geometry(Point, 4326)    NOT NULL,
     course             varchar(256),
     date               timestamp                NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS trip_points_aqi (
+    point_id    integer         NOT NULL,
+    date        timestamp       NOT NULL,
+    hour        smallint        NOT NULL,
+    geom        geometry(Point, 4326),
+    aqi         smallint
     );
     """
 
@@ -224,12 +233,29 @@ class SqlQueries:
     create_staging_aqi = """
     DROP TABLE IF EXISTS staging_aqi;
     CREATE TABLE IF NOT EXISTS staging_aqi (
-           incident_id    varchar(256),
-           date           timestamp   NOT NULL,
-           hour           smallint    NOT NULL,
-           raw_lat        numeric     NOT NULL,
-           raw_lon        numeric     NOT NULL,
-           aqi            smallint    NOT NULL,
+           incident_id    varchar(256) NOT NULL,
+           date           timestamp    NOT NULL,
+           hour           smallint     NOT NULL,
+           raw_lat        numeric      NOT NULL,
+           raw_lon        numeric      NOT NULL,
+           aqi            smallint     NOT NULL,
+           geom   geometry(Point, 4326) GENERATED ALWAYS AS (
+               ST_SetSRID(
+                          ST_MakePoint(raw_lon, raw_lat),
+                          4326
+               )) STORED
+    );
+    """
+
+    create_staging_trip_points_aqi = """
+    DROP TABLE IF EXISTS staging_trip_points_aqi;
+    CREATE TABLE IF NOT EXISTS staging_trip_points_aqi (
+           point_id        integer      NOT NULL,
+           date            timestamp    NOT NULL,
+           hour            smallint     NOT NULL,
+           raw_lat         numeric      NOT NULL,
+           raw_lon         numeric      NOT NULL,
+           aqi             smallint     NOT NULL,
            geom   geometry(Point, 4326) GENERATED ALWAYS AS (
                ST_SetSRID(
                           ST_MakePoint(raw_lon, raw_lat),
@@ -293,6 +319,12 @@ class SqlQueries:
     FROM staging_aqi;
     """
 
+    upsert_trip_points_aqi = """
+    INSERT INTO trip_points_aqi
+    SELECT point_id, date, hour, geom, aqi
+    FROM staging_trip_points_aqi;
+    """
+
     upsert_current_perimeter = """
     DELETE FROM current_perimeters
     WHERE current_perimeters.incident_id IN
@@ -335,7 +367,8 @@ class SqlQueries:
     select_fire_centroids = """
     SELECT incident_id,
            ST_X(centroid) as lon,
-           ST_Y(centroid) as lat
+           ST_Y(centroid) as lat,
+           35 as rad -- set this relative to the incident
     FROM current_incidents;
     """
 
@@ -357,6 +390,12 @@ class SqlQueries:
     insert_staging_aqi = """
     INSERT INTO staging_aqi (incident_id, date, hour,
                              raw_lat, raw_lon, aqi)
+    VALUES %s
+    """
+
+    insert_staging_trip_points_aqi = """
+    INSERT INTO staging_trip_points_aqi (point_id, date, hour,
+                                         raw_lat, raw_lon, aqi)
     VALUES %s
     """
 
@@ -448,7 +487,7 @@ class SqlQueries:
     -- they are redundant otherwise.
     -- AND  latest_points.last_update >= active_trips.start_date
     -- AND  latest_points.last_update <= active_trips.end_date
-    JOIN current_incidents ci
+    JOIN (SELECT * FROM current_incidents WHERE total_acres IS NOT NULL) ci
     ON   ST_DWithin(latest_points.last_location::geography,
                     ci.centroid::geography,
                     %(max_distance_m)s --meters
@@ -498,6 +537,23 @@ class SqlQueries:
                                    ) AS row_num
           FROM user_messages um) um
     WHERE row_num <= 2;
+    """
+
+    select_latest_points = """
+    SELECT tp.point_id,
+           ST_X(last_location) as lon,
+           ST_Y(last_location) as lat,
+           35 as rad
+    FROM (
+          SELECT tp.*, row_number() OVER (PARTITION BY trip_id
+                                          ORDER BY date DESC
+                                         ) AS row_num
+          FROM trip_points tp
+         ) tp
+    JOIN trips t ON tp.trip_id = t.trip_id
+    WHERE row_num = 1
+    AND   trips.start_date <= %(current_date)s
+    AND   trips.end_date >= %(current_date)s;
     """
 
     """

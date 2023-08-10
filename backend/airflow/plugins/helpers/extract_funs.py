@@ -32,13 +32,13 @@ def extract_perimeter_attr(feature):
              ])
 
 
-def extract_aqi_attr(incident_id, api_response):
+def extract_aqi_attr(spatial_object_id, api_response):
     """
     - loop through api_result
     - for each record, get date and location/aqi recorded
     - return list of tuples
     """
-    tuples_list = [(incident_id,
+    tuples_list = [(spatial_object_id,
                     x['DateObserved'],
                     x['HourObserved'],
                     x['Latitude'],
