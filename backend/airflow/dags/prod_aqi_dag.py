@@ -41,7 +41,7 @@ create_staging_aqi = PostgresOperator(
     task_id="create_staging_aqi",
     dag=dag,
     postgres_conn_id=POSTGRES_DB,
-    sql=sql.create_staging_aqi
+    sql=sql.create_staging_trip_points_aqi
 )
 
 stage_aqi_data_operator = StageDataOperator(

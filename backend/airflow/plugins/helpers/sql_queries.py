@@ -52,6 +52,7 @@ class SqlQueries:
     drop_report_tables = """
     DROP TABLE IF EXISTS incident_reports;
     DROP TABLE IF EXISTS trip_state_reports;
+    DROP TABLE IF EXISTS user_aqi_reports;
     """
 
     create_report_tables = """
@@ -66,6 +67,14 @@ class SqlQueries:
     user_id   integer    NOT NULL,
     trip_id   integer    NOT NULL,
     state     varchar    NOT NULL,
+    date_sent timestamp  NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS trip_state_reports (
+    user_id     integer    NOT NULL,
+    point_id    integer    NOT NULL,
+    max_aqi     varchar    NOT NULL,
+    min_aqi     varchar    NOT NULL,
     date_sent timestamp  NOT NULL
     );
     """
@@ -119,9 +128,8 @@ class SqlQueries:
     CREATE TABLE IF NOT EXISTS trip_points_aqi (
     point_id    integer         NOT NULL,
     date        timestamp       NOT NULL,
-    hour        smallint        NOT NULL,
     geom        geometry(Point, 4326),
-    aqi         smallint
+    aqi         smallint        NOT NULL
     );
     """
 
@@ -256,11 +264,11 @@ class SqlQueries:
            raw_lat         numeric      NOT NULL,
            raw_lon         numeric      NOT NULL,
            aqi             smallint     NOT NULL,
-           geom   geometry(Point, 4326) GENERATED ALWAYS AS (
-               ST_SetSRID(
-                          ST_MakePoint(raw_lon, raw_lat),
-                          4326
-               )) STORED
+           geom            geometry(Point, 4326) GENERATED ALWAYS AS (
+                            ST_SetSRID(
+                              ST_MakePoint(raw_lon, raw_lat),
+                              4326
+                           )) STORED
     );
     """
 
@@ -321,7 +329,10 @@ class SqlQueries:
 
     upsert_trip_points_aqi = """
     INSERT INTO trip_points_aqi
-    SELECT point_id, date, hour, geom, aqi
+    SELECT point_id,
+           date + ((hour)::varchar(256) || ' hour')::interval AS date,
+           geom,
+           aqi
     FROM staging_trip_points_aqi;
     """
 
@@ -442,6 +453,76 @@ class SqlQueries:
     AND    trips.end_date >= %(current_date)s;
     """
 
+    select_latest_points = """
+    SELECT tp.point_id,
+           ST_X(last_location) as lon,
+           ST_Y(last_location) as lat,
+           35 as rad
+    FROM (
+          SELECT tp.*, row_number() OVER (PARTITION BY trip_id
+                                          ORDER BY date DESC
+                                         ) AS row_num
+          FROM trip_points tp
+         ) tp
+    JOIN trips t ON tp.trip_id = t.trip_id
+    WHERE row_num = 1
+    AND   t.start_date <= %(current_date)s
+    AND   t.end_date >= %(current_date)s;
+    """
+
+    select_active_users_latest_aqi = """
+
+    DROP TABLE IF EXISTS latest_points;
+    CREATE TEMP TABLE latest_points AS
+    SELECT t.user_id, t.device_id, t.trip_id, tp.point_id
+    FROM (
+          SELECT tp.*, row_number() OVER (PARTITION BY trip_id
+                                          ORDER BY date DESC
+                                         ) AS row_num
+          FROM trip_points tp
+         ) tp
+    JOIN trips t ON tp.trip_id = t.trip_id
+    WHERE row_num = 1
+    AND   t.start_date <= %(current_date)s
+    AND   t.end_date >= %(current_date)s;
+
+    DROP TABLE IF EXISTS latest_points_aqi;
+    CREATE TEMP TABLE latest_points_aqi AS
+    SELECT *
+    FROM (
+
+    ) tpa
+
+    DROP TABLE IF EXISTS latest_points_aqi;
+    CREATE TEMP TABLE latest_points_aqi AS
+    SELECT lp.user_id, lp.device_id, lp.trip_id, lp.point_id,
+           MAX(tpa.aqi) AS max_aqi, MIN(tpa.aqi) AS min_aqi
+    FROM latest_points lp
+    JOIN (
+          SELECT tpa.*, row_number() OVER (PARTITION BY point_id
+                                           ORDER BY date DESC
+                                        ) AS row_num
+    ) tpa
+    ON  lp.trip_id = tpa.trip_id
+    AND lp.point_id = tpa.point_id
+    WHERE tpa.row_num = 1
+    GROUP BY lp.user_id,
+             lp.device_id,
+             lp.trip_id,
+             lp.point_id;
+
+    SELECT u.user_id,
+           lpa.point_id,
+           u.mapshare_id,
+           u.mapshare_pw,
+           lpa.device_id,
+           lpa.max_aqi,
+           lpa.min_aqi
+    FROM latests_points_aqi lpa JOIN users u
+    ON lpa.user_id = u.user_id;
+
+    """
+
     # NOTE: THE DATE BOUNDS NEED TO BE CHANGED!!!
     select_user_incidents = """
     DROP TABLE IF EXISTS user_incidents;
@@ -539,22 +620,6 @@ class SqlQueries:
     WHERE row_num <= 2;
     """
 
-    select_latest_points = """
-    SELECT tp.point_id,
-           ST_X(last_location) as lon,
-           ST_Y(last_location) as lat,
-           35 as rad
-    FROM (
-          SELECT tp.*, row_number() OVER (PARTITION BY trip_id
-                                          ORDER BY date DESC
-                                         ) AS row_num
-          FROM trip_points tp
-         ) tp
-    JOIN trips t ON tp.trip_id = t.trip_id
-    WHERE row_num = 1
-    AND   trips.start_date <= %(current_date)s
-    AND   trips.end_date >= %(current_date)s;
-    """
 
     """
 

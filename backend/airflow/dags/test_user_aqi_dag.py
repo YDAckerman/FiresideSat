@@ -22,11 +22,13 @@ POSTGRES_DB = "fireside"
 # ##############################################
 
 dag = DAG('test_user_aqi_dag',
-          start_date=datetime(2023, 7, 4),
+          start_date=datetime(2021, 7, 14),
+          end_date=datetime(2021, 7, 14),
           default_args=default_args,
           description='TEST ELT for User AQI Conditions',
-          schedule_interval='@hourly',
-          catchup=False
+          schedule_interval=timedelta(days=1),
+          max_active_runs=1,
+          catchup=True
           )
 
 # ##############################################
@@ -41,7 +43,7 @@ create_staging_aqi = PostgresOperator(
     task_id="create_staging_user_aqi",
     dag=dag,
     postgres_conn_id=POSTGRES_DB,
-    sql=sql.create_staging_aqi
+    sql=sql.create_staging_trip_points_aqi
 )
 
 stage_aqi_data_operator = StageDataOperator(
