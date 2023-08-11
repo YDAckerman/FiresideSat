@@ -70,8 +70,7 @@ class SqlQueries:
     date_sent timestamp  NOT NULL
     );
 
-    CREATE TABLE IF NOT EXISTS trip_state_reports (
-    user_id     integer    NOT NULL,
+    CREATE TABLE IF NOT EXISTS user_aqi_reports (
     point_id    integer    NOT NULL,
     max_aqi     varchar    NOT NULL,
     min_aqi     varchar    NOT NULL,
@@ -83,6 +82,11 @@ class SqlQueries:
     INSERT INTO trip_state_reports (user_id, trip_id,
                                     state, date_sent)
     VALUES (%(user_id)s, %(trip_id)s, %(state)s, %(date_sent)s);
+    """
+
+    insert_user_aqi_report = """
+    INSERT INTO user_aqi_reports (point_id, max_aqi, min_aqi, date_sent)
+    VALUES (%(point_id)s, %(max_aqi)s, %(min_aqi)s, %(date_sent)s);
     """
 
     create_user_table = """
