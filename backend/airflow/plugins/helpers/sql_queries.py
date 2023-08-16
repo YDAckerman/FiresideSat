@@ -86,7 +86,7 @@ class SqlQueries:
 
     insert_user_aqi_report = """
     INSERT INTO user_aqi_reports (point_id, max_aqi, min_aqi, date_sent)
-    VALUES (%(point_id)s, %(max_aqi)s, %(min_aqi)s, %(date_sent)s);
+    VALUES (%(point_id)s, %(max_aqi)s, %(min_aqi)s, %(aqi_date)s);
     """
 
     create_user_table = """
@@ -478,8 +478,9 @@ class SqlQueries:
 
     DROP TABLE IF EXISTS latest_points;
     CREATE TEMP TABLE latest_points AS
-    SELECT t.user_id, t.device_id, t.trip_id, tp.point_id
+    SELECT t.user_id, t.trip_id, tp.point_id
     FROM (
+          -- seems like I could have just taken max(date) here...
           SELECT tp.*, row_number() OVER (PARTITION BY trip_id
                                           ORDER BY date DESC
                                          ) AS row_num
@@ -492,26 +493,25 @@ class SqlQueries:
 
     DROP TABLE IF EXISTS latest_points_aqi;
     CREATE TEMP TABLE latest_points_aqi AS
-    SELECT *
-    FROM (
-
-    ) tpa
-
-    DROP TABLE IF EXISTS latest_points_aqi;
-    CREATE TEMP TABLE latest_points_aqi AS
-    SELECT lp.user_id, lp.device_id, lp.trip_id, lp.point_id,
-           MAX(tpa.aqi) AS max_aqi, MIN(tpa.aqi) AS min_aqi
+    SELECT lp.user_id, lp.trip_id, lp.point_id,
+           MAX(tpa.aqi) AS max_aqi, MIN(tpa.aqi) AS min_aqi,
+           MAX(tpa.date) AS aqi_date
     FROM latest_points lp
     JOIN (
-          SELECT tpa.*, row_number() OVER (PARTITION BY point_id
-                                           ORDER BY date DESC
-                                        ) AS row_num
+          -- there are multiple rows of aqi data for each
+          -- point, so we don't want to partition like above.
+          SELECT tpa1.point_id, tpa1.aqi, tpa1.date
+          FROM trip_points_aqi tpa1
+          JOIN (
+                SELECT point_id, MAX(date) AS max_date
+                FROM trip_points_aqi
+                GROUP BY point_id
+                ) tpa2
+          ON  tpa1.point_id = tpa2.point_id
+          AND tpa1.date = tpa2.max_date
     ) tpa
-    ON  lp.trip_id = tpa.trip_id
-    AND lp.point_id = tpa.point_id
-    WHERE tpa.row_num = 1
+    ON lp.point_id = tpa.point_id
     GROUP BY lp.user_id,
-             lp.device_id,
              lp.trip_id,
              lp.point_id;
 
@@ -519,12 +519,13 @@ class SqlQueries:
            lpa.point_id,
            u.mapshare_id,
            u.mapshare_pw,
-           lpa.device_id,
+           d.garmin_device_id,
            lpa.max_aqi,
-           lpa.min_aqi
-    FROM latests_points_aqi lpa JOIN users u
-    ON lpa.user_id = u.user_id;
-
+           lpa.min_aqi,
+           lpa.aqi_date
+    FROM latest_points_aqi lpa
+    JOIN users u ON  lpa.user_id = u.user_id
+    JOIN devices d ON lpa.user_id = d.user_id;
     """
 
     # NOTE: THE DATE BOUNDS NEED TO BE CHANGED!!!

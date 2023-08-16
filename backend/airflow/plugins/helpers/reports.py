@@ -11,12 +11,14 @@ class Report:
 
     def send(self, endpoint, test=False):
 
-        if test:
-            return None
-
         endpoint.set_route(user=self.report_data['mapshare_id'])
         headers = get_auth_basic('', self.report_data['mapshare_pw'])
         json = self._make_json()
+
+        if test:
+            print(json)
+            return None
+
         return endpoint.post(json=json, headers=headers)
 
     def save(self, pg_cur):

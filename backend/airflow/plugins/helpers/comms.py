@@ -1,4 +1,4 @@
-from helpers.reports import ReportFactory
+from helpers.report_factory import ReportFactory
 from helpers.endpoint import Endpoint
 from helpers.endpoint_templates import SEND_MESSAGE_TEMPLATE
 import json
