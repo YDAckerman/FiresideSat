@@ -98,6 +98,7 @@ services:
       - ./frontend/flask:/app
     environment:
       - FLASK_APP=/app/main.py
+      - PYTHONPATH=/app/core
     command: flask run --host=0.0.0.0
     ports:
       - 3001:5000
