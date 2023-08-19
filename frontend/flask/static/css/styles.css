@@ -4,25 +4,59 @@
     display: flex;
     justify-content: center;
     font-family: "Courier", monospace;
+    font-size: 30px;
+    margin-bottom: 30px;
+}
+
+.topnav {
+  overflow: hidden;
+  background-color: #333;
+}
+
+.topnav a {
+  float: left;
+  color: #f2f2f2;
+  text-align: center;
+  padding: 14px 16px;
+  text-decoration: none;
+  font-size: 17px;
+}
+
+.topnav a:hover {
+  background-color: #ddd;
+  color: black;
+}
+
+.topnav a.active {
+  background-color: #ff4d4d;
+  color: black;
 }
 
 .center-options {
     width: 100%;
     display: flex;
     justify-content: center;
+    margin-top: 30px;
 }
 
-.login-box {
-    width: 40%;
+.form-box {
+    width: 20%;
+    margin-top: 50px;
 }
 
-.usr-login {
+legend {
+    font-weight: bold;
+    font-size: 30px;
+    margin-bottom: 10px;
+}
+
+.form-field {
     margin-top: 10px;
     display: flex;
     justify-content: space-between;
 }
 
-.sign-button {
+.submit-button {
     display: flex;
     justify-content: center;
     margin-top: 20px;

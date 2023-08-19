@@ -1,6 +1,7 @@
 from .device import Device
 from .result import Result
 from .sql_queries import SqlQueries
+from hashlib import sha3_256
 
 
 qrys = SqlQueries()
@@ -20,7 +21,8 @@ class User():
                             "otp": None}
 
     def set_otp(self, otp):
-        self.credentials['otp'] = otp
+        self.credentials['otp'] = sha3_256(bytes(otp, encoding='utf-8')) \
+            .hexdigest()
 
     def exists(self, conn):
 
@@ -45,16 +47,19 @@ class User():
         else:
             return Result(False, 'User does not exist.')
 
-    def register(self, conn):
+    def register(self, conn, debug=False):
 
         if self.exists(conn):
             return Result(False, 'Email already in use.')
 
         device = Device()
-        device.set_id("")
-        self.set_otp("12345")
-        # res = device.send_otp(user)
-        res = Result(True, 'Check your satphone for a one-time passcode.')
+
+        if debug:
+            self.set_otp("12345")
+            device.set_id("")
+            res = Result(True, 'Check your satphone for confirmation.')
+        else:
+            res = device.send_otp(self)
 
         if res.status:
 
@@ -62,8 +67,8 @@ class User():
                 with conn.cursor() as cur:
                     db_err_result = Result(False, 'A database error occurred')
                     try:
-                        cur.execute(qrys.new_usr, self
-                                    .credentials)
+                        cur.execute(qrys.new_usr,
+                                    self.credentials)
 
                     except Exception as e:
                         print("Insert User Error: " + e)
@@ -83,4 +88,5 @@ class User():
                         return db_err_result
 
                 conn.commit()
+                
         return res

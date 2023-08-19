@@ -121,18 +121,6 @@ services:
       retries: 5
     restart: always
 
-  fireside:
-    image: postgis/postgis:15-3.3
-    environment:
-      POSTGRES_USER: root
-      POSTGRES_PASSWORD: secret
-      POSTGRES_DB: fireside
-    ports:
-      - 5433:5432
-    volumes:
-      - fireside-db-volume:/var/lib/postgresql/data
-    restart: always
-
   fireside_prod:
     image: postgis/postgis:15-3.3
     environment:

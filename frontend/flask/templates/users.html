@@ -1,12 +1,48 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
-        <title>FiresideSat</title>
+        <title>fireside sat</title>
         <meta charset="utf-8"/>
         <meta name="viewport" content="width=device-width,
                                        initial-scale=1.0"/>
-        <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css')}}">
+        <link rel="stylesheet" href="{{ url_for('static',
+                                     filename='css/styles.css')}}">
+        {% import "macros.html" as macros %}
   </head>
   <body>
+    
+    {{macros.make_nav_bar('users') }}
+    <div class="center-options">
+      <form class="form-box"
+            action="{{ url_for('register') }}"
+            method = "post">
+        <fieldset>
+            <legend>Register a User</legend>          
+            <div class="form-field">
+                <label for="usr_email">Email Address:</label>
+                <input type="email" id="usr_email"
+                       name="email" required>
+            </div>
+            <div class="form-field">
+                <label for="usr_mapshare_id">MapShare ID:</label>
+                <input type="text" pattern="^[0-9a-zA-Z].*"
+                       id="usr_mapshare_id"
+                       name="mapshare_id" required>
+            </div>
+            <div class="form-field">
+                <label for="usr_mapshare_pw">MapShare Password:</label>
+                <input type="text" pattern="^[0-9a-zA-Z].*"
+                       id="usr_mapshare_pw"
+                       name="mapshare_password" required>
+            </div>
+            <div class="submit-button">
+              <input type="submit" value="Register">
+            </div>
+            {% block response %}
+            <div> {{result.message}} </div>
+            {% endblock %}
+            </fieldset>
+      </form>
+    </div>
   </body>
 </html>

@@ -1,0 +1,12 @@
+
+{% macro make_nav_bar(calling_page) -%}
+<div class="topnav">
+  {% for page in ['home', 'users', 'trips'] %}
+     {% if calling_page == page %}
+        <a class="active" href="{{url_for(page)}}">{{page}}</a>
+     {% else %}
+        <a href="{{url_for(page)}}">{{page}}</a>
+     {% endif %}
+  {% endfor %}
+</div>
+{% endmacro %}
