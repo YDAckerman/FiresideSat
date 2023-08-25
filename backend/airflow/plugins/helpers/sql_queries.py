@@ -92,8 +92,8 @@ class SqlQueries:
     create_user_table = """
     CREATE TABLE IF NOT EXISTS users (
     user_id            serial         PRIMARY KEY,
-    user_email         varchar(256)   NOT NULL,
-    user_pw            varchar(256)   NOT NULL,
+    user_email         varchar(256),
+    user_pw            varchar(256),
     mapshare_id        varchar(256)   NOT NULL,
     mapshare_pw        varchar(256)   NOT NULL
     );

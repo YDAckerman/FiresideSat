@@ -11,5 +11,37 @@
   </head>
   <body>
     {{ macros.make_nav_bar('trips') }}
+    <div class="center-options">
+      <form class="form-box"
+            action="{{ url_for('add_trip') }}"
+            method = "post">
+        <fieldset>
+            <legend>Add a Trip</legend>          
+            <div class="form-field">
+                <label for="usr_mapshare_id">MapShare ID:</label>
+                <input type="text" pattern="^[0-9a-zA-Z].*"
+                       id="usr_mapshare_id"
+                       name="mapshare_id" required>
+            </div>
+            <div class="form-field">
+                <label for="trip_start">Start Date</label>
+                <input type="date" id="trip_start"
+                       name="trip_start" required>
+            </div>
+            <div class="form-field">
+                <label for="trip_end">End Date</label>
+                <input type="date" id="trip_end"
+                       name="trip_end" required>
+            </div>
+            <div class="submit-button">
+              <input type="submit" value="Add">
+            </div>
+
+            </fieldset>
+      </form>
+        {% block response %}
+             <div> {{result.message}} </div>
+        {% endblock %}
+    </div>
   </body>
 </html>

@@ -2,9 +2,14 @@ from seleniumwire import webdriver
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
-from .result import Result
+from .result import Result, RESULT_DB_ERR
+from .sql_queries import SqlQueries
+import requests
+from pykml import parser
 import re
 import random
+
+qrys = SqlQueries()
 
 
 class Device():
@@ -12,11 +17,23 @@ class Device():
     OTP_LEN = 6
     OTP_LOWER, OTP_UPPER = (0, 9)
 
-    def __init__(self):
-        self.garmin_id = None
-
-    def set_id(self, garmin_id):
+    def __init__(self, device_id=None, garmin_id=None, imei=None):
+        self.device_id = device_id
         self.garmin_id = garmin_id
+        self.imei = imei
+
+    def set_garmin_id(self, garmin_id):
+        self.garmin_id = garmin_id
+
+    def set_device_id(self, device_id):
+        self.device_id = device_id
+
+    def set_imei(self, usr):
+        mapshare_id, mapshare_pw = list(usr.credentials.values())
+        url = f'https://share.garmin.com/Feed/Share/{mapshare_id}'
+        resp = requests.get(url, auth=(mapshare_id, mapshare_pw))
+        root = parser.fromstring(bytes(resp.text, encoding='utf8'))
+        self.imei = root.Document.Folder.Placemark.ExtendedData.Data[6].value
 
     def send_otp(self, usr):
 
@@ -26,9 +43,46 @@ class Device():
         post_params = self._send_user_message(usr, otp)
         if post_params:
             usr.set_otp(otp)
-            self.set_id(self._extract_device_id(post_params))
+            self.set_garmin_id(self._extract_device_id(post_params))
             return Result(True, 'OTP successfully sent')
         return Result(False, 'Message failed to send')
+
+    def register(self, usr, conn):
+
+        try:
+            self.set_imei(usr)
+        except Exception as e:
+            print("Set Device IMEI Error: " + e)
+            return Result(False, 'Problem getting device IMEI')
+
+        with conn:
+            with conn.cursor() as cur:
+
+                try:
+
+                    cur.execute(qrys.new_device,
+                                {"user_id": usr.user_id,
+                                 'garmin_device_id': self.garmin_id,
+                                 'garmin_imei': self.imei})
+                    self.set_device_id(cur.fetchall()[0][0])
+
+                except Exception as e:
+                    print("Insert Device Error: " + e)
+                    return RESULT_DB_ERR
+
+        conn.commit()
+
+        return Result(True, 'Device Registration Successful')
+
+    def send_confirmation(self, usr):
+
+        msg = "Registration Successful"
+        post_params = self._send_user_message(usr, msg)
+        if post_params:
+            self.set_garmin_id(self._extract_device_id(post_params))
+            return Result(True, 'Check your satphone for confirmation.')
+        return Result(False, 'Registration failed. ',
+                      'Double check your credentials.')
 
     @staticmethod
     def _send_user_message(usr, msg):

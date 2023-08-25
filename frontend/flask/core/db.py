@@ -4,7 +4,7 @@ from flask import current_app, g
 
 
 def get_conn():
-    if 'db' not in g:
+    if 'conn' not in g:
 
         g.conn = psycopg2.connect(
             database=current_app.config['DB_NAME'],
@@ -22,3 +22,7 @@ def close_conn(e=None):
 
     if conn is not None:
         conn.close()
+
+
+def init_app(app):
+    app.teardown_appcontext(close_conn)

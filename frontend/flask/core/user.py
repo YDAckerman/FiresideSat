@@ -1,37 +1,43 @@
-from .device import Device
-from .result import Result
-from .sql_queries import SqlQueries
 from hashlib import sha3_256
-
+from .device import Device
+from .result import Result, RESULT_DB_ERR
+from .sql_queries import SqlQueries
 
 qrys = SqlQueries()
+
+RESULT_MAPSHARE_ID_ERR = Result(False, 'Mapshare ID already in use.')
+RESULT_REG_SUCCESS = Result(True, 'Check your satphone for confirmation.')
 
 
 class User():
 
-    def __init__(self, email,
-                 password=None,
+    user_id = None
+
+    def __init__(self,
                  mapshare_id=None,
                  mapshare_password=None):
 
-        self.credentials = {"email": email,
-                            "password": password,
-                            "mapshare_id": mapshare_id,
-                            "mapshare_pw": mapshare_password,
-                            "otp": None}
+        self.credentials = {
+            "email":  "NA",
+            "pw": "NA",
+            "mapshare_id": mapshare_id,
+            "mapshare_pw": mapshare_password
+        }
 
-    def set_otp(self, otp):
+    def _set_user_id(self, new_id):
+        self.user_id = new_id
+
+    def _set_otp(self, otp):
         self.credentials['otp'] = sha3_256(bytes(otp, encoding='utf-8')) \
             .hexdigest()
+
+    def _update_mapshare_pw(self, new_pw):
+        pass
 
     def exists(self, conn):
 
         with conn:
             with conn.cursor() as cur:
-
-                # check if user exists
-                # (if so, direct to reset password;
-                # must provide new mapshare pw, too)
                 cur.execute(qrys.usr_exists,
                             self.credentials)
                 user_exists = cur.fetchall()
@@ -40,53 +46,37 @@ class User():
             return True
         return False
 
-    def login(self, conn):
-
-        if self.exists(conn):
-            pass
-        else:
-            return Result(False, 'User does not exist.')
-
     def register(self, conn, debug=False):
 
         if self.exists(conn):
-            return Result(False, 'Email already in use.')
+            return RESULT_MAPSHARE_ID_ERR
 
         device = Device()
 
         if debug:
-            self.set_otp("12345")
-            device.set_id("")
-            res = Result(True, 'Check your satphone for confirmation.')
+            device.set_garmin_id("000000")
+            res = RESULT_REG_SUCCESS
         else:
-            res = device.send_otp(self)
+            res = device.send_confirmation(self)
 
         if res.status:
 
             with conn:
                 with conn.cursor() as cur:
-                    db_err_result = Result(False, 'A database error occurred')
+
                     try:
+
                         cur.execute(qrys.new_usr,
                                     self.credentials)
+                        self._set_user_id(cur.fetchall()[0][0])
 
                     except Exception as e:
                         print("Insert User Error: " + e)
-                        return db_err_result
+                        return RESULT_DB_ERR
 
-                    try:
-                        user_id = cur.fetchall()[0][0]
-                        cur.execute(qrys.new_device_for_usr,
-                                    {"user_id": user_id})
-                        device_id = cur.fetchall()[0][0]
-                        cur.execute(qrys.update_device_garmin_id,
-                                    {'device_id': device_id,
-                                     'garmin_device_id':
-                                     device.garmin_id})
-                    except Exception as e:
-                        print("Insert/Update Device Error: " + e)
-                        return db_err_result
+            conn.commit()
+            device_reg_result = device.register(self, conn)
+            if not device_reg_result.status:
+                return device_reg_result
 
-                conn.commit()
-                
-        return res
+        return res.append(device_reg_result)

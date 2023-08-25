@@ -10,3 +10,31 @@
   {% endfor %}
 </div>
 {% endmacro %}
+
+{% macro make_update_trip_input(trip) -%}
+    <div class="form-field">
+      <label for="usr_mapshare_id">MapShare ID:</label>
+      <input type="hidden" value="{{trip.mapshare_id}}" 
+             id="usr_mapshare_id"
+             name="mapshare_id"
+             readonly>
+    </div>
+    <div class="form-field">
+        <label for="trip_start">Start Date</label>
+        <input type="date" id="trip_start"
+               name="trip_start"
+               value="{{trip.start_date}}" required>
+    </div>
+    <div class="form-field">
+        <label for="trip_end">End Date</label>
+        <input type="date" id="trip_end"
+               name="trip_end"
+               value="{{trip.end_date}}" required>
+    </div>
+    <div class="submit-button">
+      <input type="submit" value="Update">
+    </div>
+    <div class="submit-button">
+      <input type="submit" value="Delete">
+    </div>
+{% endmacro %}

@@ -12,3 +12,10 @@ class Result():
             print("Success: " + self.message, file=sys.stdout)
         else:
             print("Failure: " + self.message, file=sys.stderr)
+
+    def append(self, res):
+        self.status &= res.status
+        self.message += res.message
+
+
+RESULT_DB_ERR = Result(False, 'A database error occurred')
