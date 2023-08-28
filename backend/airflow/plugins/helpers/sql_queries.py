@@ -94,13 +94,13 @@ class SqlQueries:
     user_id            serial         PRIMARY KEY,
     user_email         varchar(256),
     user_pw            varchar(256),
-    mapshare_id        varchar(256)   NOT NULL,
+    mapshare_id        varchar(256)   UNIQUE NOT NULL,
     mapshare_pw        varchar(256)   NOT NULL
     );
 
     CREATE TABLE IF NOT EXISTS devices (
     device_id          serial         PRIMARY KEY,
-    user_id            integer        NOT NULL,
+    user_id            integer        UNIQUE NOT NULL,
     garmin_imei        varchar(256),
     garmin_device_id   varchar(256)
     );

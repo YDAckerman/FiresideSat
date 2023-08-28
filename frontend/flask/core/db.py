@@ -1,6 +1,7 @@
 
 import psycopg2
 from flask import current_app, g
+from .result import RESULT_DB_ERR
 
 
 def get_conn():
@@ -15,6 +16,29 @@ def get_conn():
         )
 
     return g.conn
+
+
+def db_extract(query, data):
+    conn = get_conn()
+    with conn.cursor() as cur:
+        try:
+            cur.execute(query, data)
+        except Exception as e:
+            print(e)
+            return None
+    return cur.fetchall()
+
+
+def db_submit(query, data, res):
+    conn = get_conn()
+    with conn.cursor() as cur:
+        try:
+            cur.execute(query, data)
+        except Exception as e:
+            print(e)
+            return RESULT_DB_ERR
+    conn.commit()
+    return res
 
 
 def close_conn(e=None):

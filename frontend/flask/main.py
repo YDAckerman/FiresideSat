@@ -16,7 +16,6 @@ db_init_app(app)
 
 @app.route('/')
 def home():
-    print(app.config)
     return render_template("index.html")
 
 
@@ -33,14 +32,11 @@ def change_mapshare_pw():
 @app.route('/register', methods=['POST'])
 def register():
 
-    conn = get_conn()
+    get_conn()
 
     usr = User(request.form.get('mapshare_id'),
                request.form.get('mapshare_password'))
-    register_result = usr.register(conn, debug=app.config['DEBUG'])
-
-    if register_result.status:
-        return render_template("users.html", result=register_result)
+    register_result = usr.register(debug=app.config['DEBUG'])
     return render_template("users.html", result=register_result)
 
 
