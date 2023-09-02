@@ -26,7 +26,7 @@ def db_extract(query, data):
         except Exception as e:
             print(e)
             return None
-    return cur.fetchall()
+        return cur.fetchall()
 
 
 def db_submit(query, data, res):

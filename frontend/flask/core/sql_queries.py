@@ -4,12 +4,6 @@ class SqlQueries():
     def __init__(self):
         pass
 
-    does_user_exist = """
-    SELECT 1
-    FROM users
-    WHERE  mapshare_id = %(mapshare_id)s;
-    """
-
     check_device_exists = """
     SELECT 1
     FROM devices
@@ -17,7 +11,18 @@ class SqlQueries():
     """
 
     select_user_id = """
-    SELECT user_id FROM users WHERE mapshare_id = %(mapshare_id)s;
+    SELECT COALESCE(MAX(user_id), 0)
+    FROM users WHERE mapshare_id = %(mapshare_id)s;
+    """
+
+    select_device_id = """
+    SELECT COALESCE(MAX(device_id), 0)
+    FROM devices WHERE user_id = %(user_id)s;
+    """
+
+    select_trip_dates = """
+    SELECT trip_id, start_date, end_date
+    FROM trips WHERE user_id = %(user_id)s;
     """
 
     insert_new_usr = """
@@ -36,7 +41,7 @@ class SqlQueries():
     """
 
     delete_user = """
-    DELETE FROM users WHERE mapshare_id = %(mapshare_id)s;
+    DELETE FROM users WHERE user_id = %(user_id)s;
     """
 
     insert_new_trip = """

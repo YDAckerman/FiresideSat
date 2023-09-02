@@ -45,6 +45,35 @@ def trips():
     return render_template("trips.html", result=EMPTY_RESULT)
 
 
+@app.route('/user_trips', methods=['POST'])
+def user_trips():
+
+    get_conn()
+
+    # get user form data
+    current_mapshare_id = request.form.get('mapshare_id')
+    # usr = User(current_mapshare_id)
+
+    # get trip form data (if applicable)
+
+    # get all user trips (might be empty)
+
+    return render_template("user_trips.html",
+                           current_mapshare_id=current_mapshare_id,
+                           user_result=EMPTY_RESULT,
+                           trip_result=EMPTY_RESULT)
+
+
 @app.route('/add_trip', methods=['POST'])
 def add_trip():
+    return render_template("trips.html", result=EMPTY_RESULT)
+
+
+@app.route('/alter_trip', methods=['POST'])
+def alter_trip():
+    return render_template("trips.html", result=EMPTY_RESULT)
+
+
+@app.route('/delete_trip', methods=['POST'])
+def delete_trip():
     return render_template("trips.html", result=EMPTY_RESULT)
