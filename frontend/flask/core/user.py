@@ -2,6 +2,7 @@ from .db import db_submit, db_extract
 from .result import Result
 from .trip import Trip
 from .sql_queries import SqlQueries
+from datetime import datetime
 
 from seleniumwire import webdriver
 from selenium.webdriver.support.ui import WebDriverWait
@@ -37,6 +38,7 @@ class User():
         self.user_id = self._get_user_id()
         if self.user_id:
             self.device_id = self._get_device_id()
+            self._get_trips()
 
     def _update_mapshare_pw(self, new_pw):
         pass
@@ -44,6 +46,61 @@ class User():
     def _get_user_id(self):
         return db_extract(qrys.select_user_id,
                           self.credentials)[0][0]
+
+    def _get_trips(self):
+
+        trip_data = db_extract(qrys.select_user_trips,
+                               {'user_id': self.user_id})
+        if trip_data:
+            self.trips = [Trip(*datum) for datum in trip_data]
+
+    def add_trip(self, new_trip):
+
+        check_overlap = [t.intersects(new_trip) for t in self.trips]
+        if sum(check_overlap) != 0:
+            return Result(None, "Trips Cannot Overlap")
+
+        db_res = db_submit(qrys.insert_new_trip,
+                           {'user_id': self.user_id,
+                            'device_id': self.device_id,
+                            'start_date': new_trip.start_date,
+                            'end_date': new_trip.end_date},
+                           Result(True, "Trip Added"))
+
+        if db_res.status:
+            self._get_trips()
+
+        return db_res
+
+    def delete_trip(self, trip_id):
+
+        db_res = db_submit(qrys.delete_trip,
+                           {'trip_id': trip_id},
+                           Result(True, "Trip Deleted"))
+
+        if db_res.status:
+            self._get_trips()
+
+        return db_res
+
+    def update_trip(self, trip):
+
+        check_overlap = [t.intersects(trip) for t in self.trips
+                         if t.trip_id != trip.trip_id]
+
+        if sum(check_overlap) != 0:
+            return Result(None, "Trips Cannot Overlap")
+
+        db_res = db_submit(qrys.update_trip,
+                           {'trip_id': trip.trip_id,
+                            'start_date': trip.start_date,
+                            'end_date': trip.end_date},
+                           Result(True, "Trip Updated"))
+
+        if db_res.status:
+            self._get_trips()
+
+        return db_res
 
     def get_mapshare_id(self):
         return self.credentials['mapshare_id']

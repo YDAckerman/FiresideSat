@@ -40,8 +40,15 @@
 }
 
 .form-box {
-    width: 20%;
-    margin-top: 50px;
+    width: auto;
+    margin-top: 30px;
+    margin-bottom: 20px;
+    display: flex;
+    justify-content: space-between;
+}
+
+label {
+    margin-right: 10px;
 }
 
 legend {
@@ -50,16 +57,25 @@ legend {
     margin-bottom: 10px;
 }
 
+.trip-field {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 30px;
+}
+
 .form-field {
     margin-top: 10px;
     display: flex;
-    justify-content: space-between;
+    justify-content: auto;
+    margin-left: 10px;
 }
 
 .submit-button {
     display: flex;
     justify-content: center;
     margin-top: 20px;
+    margin-left: 10px;
 }
 
 .signup-box {

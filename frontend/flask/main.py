@@ -1,6 +1,7 @@
 from flask import Flask, render_template, request
 from core.result import Result
 from core.user import User
+from core.trip import Trip
 from core.db import init_app as db_init_app, get_conn
 import json
 
@@ -49,31 +50,104 @@ def trips():
 def user_trips():
 
     get_conn()
+    user_result = EMPTY_RESULT
+    trip_result = EMPTY_RESULT
+    user_trips = []
 
     # get user form data
     current_mapshare_id = request.form.get('mapshare_id')
-    # usr = User(current_mapshare_id)
+    usr = User(mapshare_id=current_mapshare_id)
 
-    # get trip form data (if applicable)
+    if not usr.exists:
+        user_result = Result(None, "User does not exist")
 
-    # get all user trips (might be empty)
+    else:
+        if len(usr.trips) == 0:
+            trip_result = Result(None, "There are no trips to display")
+        else:
+            user_trips = usr.trips
 
     return render_template("user_trips.html",
                            current_mapshare_id=current_mapshare_id,
-                           user_result=EMPTY_RESULT,
-                           trip_result=EMPTY_RESULT)
+                           user_result=user_result,
+                           trip_result=trip_result,
+                           user_trips=user_trips)
 
 
 @app.route('/add_trip', methods=['POST'])
 def add_trip():
-    return render_template("trips.html", result=EMPTY_RESULT)
+
+    get_conn()
+    user_result = EMPTY_RESULT
+    trip_result = EMPTY_RESULT
+
+    # get user form data
+    current_mapshare_id = request.form.get('mapshare_id')
+    usr = User(mapshare_id=current_mapshare_id)
+
+    if not usr.exists:
+        user_result = Result(None, "User does not exist")
+
+    else:
+        new_trip = Trip.from_strs("0",
+                                  request.form.get('trip_start'),
+                                  request.form.get('trip_end'))
+        trip_result = usr.add_trip(new_trip)
+
+    return render_template("user_trips.html",
+                           current_mapshare_id=current_mapshare_id,
+                           user_result=user_result,
+                           trip_result=trip_result,
+                           user_trips=usr.trips)
 
 
-@app.route('/alter_trip', methods=['POST'])
-def alter_trip():
-    return render_template("trips.html", result=EMPTY_RESULT)
+@app.route('/update_trip', methods=['POST'])
+def update_trip():
+
+    get_conn()
+    user_result = EMPTY_RESULT
+    trip_result = EMPTY_RESULT
+
+    # get user form data
+    current_mapshare_id = request.form.get('mapshare_id')
+    usr = User(mapshare_id=current_mapshare_id)
+
+    if not usr.exists:
+        user_result = Result(None, "User does not exist")
+
+    else:
+        trip = Trip.from_strs(request.form.get('trip_id'),
+                              request.form.get('trip_start'),
+                              request.form.get('trip_end'))
+        trip_result = usr.update_trip(trip)
+
+    return render_template("user_trips.html",
+                           current_mapshare_id=current_mapshare_id,
+                           user_result=user_result,
+                           trip_result=trip_result,
+                           user_trips=usr.trips)
 
 
 @app.route('/delete_trip', methods=['POST'])
 def delete_trip():
-    return render_template("trips.html", result=EMPTY_RESULT)
+
+    get_conn()
+    user_result = EMPTY_RESULT
+    trip_result = EMPTY_RESULT
+
+    # get user form data
+    current_mapshare_id = request.form.get('mapshare_id')
+    usr = User(mapshare_id=current_mapshare_id)
+
+    if not usr.exists:
+        user_result = Result(None, "User does not exist")
+
+    else:
+        trip_id = request.form.get('trip_id')
+        trip_result = usr.delete_trip(trip_id)
+
+    return render_template("user_trips.html",
+                           current_mapshare_id=current_mapshare_id,
+                           user_result=user_result,
+                           trip_result=trip_result,
+                           user_trips=usr.trips)

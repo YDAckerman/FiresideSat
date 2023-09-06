@@ -20,9 +20,27 @@ class SqlQueries():
     FROM devices WHERE user_id = %(user_id)s;
     """
 
-    select_trip_dates = """
+    insert_new_trip = """
+    INSERT INTO trips (user_id, device_id, start_date, end_date)
+    VALUES (%(user_id)s, %(device_id)s, %(start_date)s, %(end_date)s);
+    """
+
+    delete_trip = """
+    DELETE FROM trips WHERE trip_id = %(trip_id)s;
+    DELETE FROM trip_points WHERE trip_id = %(trip_id)s;
+    """
+
+    update_trip = """
+    UPDATE trips
+    SET start_date = %(start_date)s,
+          end_date = %(end_date)s
+    WHERE trip_id = %(trip_id)s;
+    """
+
+    select_user_trips = """
     SELECT trip_id, start_date, end_date
-    FROM trips WHERE user_id = %(user_id)s;
+    FROM trips WHERE user_id = %(user_id)s
+    ORDER BY start_date;
     """
 
     insert_new_usr = """
@@ -42,8 +60,5 @@ class SqlQueries():
 
     delete_user = """
     DELETE FROM users WHERE user_id = %(user_id)s;
-    """
-
-    insert_new_trip = """
-
+    DELETE FROM trips WHERE user_id = %(user_id)s;
     """

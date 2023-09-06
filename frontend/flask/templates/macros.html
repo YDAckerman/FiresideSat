@@ -11,13 +11,20 @@
 </div>
 {% endmacro %}
 
-{% macro make_update_trip_input(user_id, trip) -%}
+{% macro make_update_trip_input(mapshare_id, trip) -%}
+
+<hr width="70%" 
+    size="2" 
+    align="center"
+    color="black">
+
 <form class="form-box" method="post">
+    <div class = "trip-field">  
     <div class="form-field">
       <input type="hidden"
-             value="{{user_id}}" 
-             id="user_id"
-             name="user_id"
+             value="{{mapshare_id}}" 
+             id="mapshare_id"
+             name="mapshare_id"
              readonly>
     </div>
     <div class="form-field">
@@ -28,20 +35,20 @@
              readonly>
     </div>
     <div class="form-field">
-        <label for="trip_start">Start Date</label>
+        <label for="trip_start">Start Date: </label>
         <input type="date" id="trip_start"
                name="trip_start"
-               value="{{trip.start_date}}">
+               value="{{trip.start_date.strftime('%Y-%m-%d')}}">
     </div>
     <div class="form-field">
-        <label for="trip_end">End Date</label>
+        <label for="trip_end">End Date: </label>
         <input type="date" id="trip_end"
                name="trip_end"
-               value="{{trip.end_date}}">
+               value="{{trip.end_date.strftime('%Y-%m-%d')}}">
     </div>
     <div class="submit-button">
       <input type="submit"
-             formaction="{{ url_for('alter_trip') }}"
+             formaction="{{ url_for('update_trip') }}"
              value="Update">
     </div>
     <div class="submit-button">
@@ -49,5 +56,7 @@
              formaction="{{ url_for('delete_trip') }}"
              value="Delete">
     </div>
-    </form>
+    </div>
+</form>
+
 {% endmacro %}
