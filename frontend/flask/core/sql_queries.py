@@ -37,6 +37,14 @@ class SqlQueries():
     WHERE trip_id = %(trip_id)s;
     """
 
+    upsert_airnow_key = """
+    INSERT INTO variables (name, value)
+    VALUES ('airnow_api_key', %(airnow_key)s)
+    ON CONFLICT (name) DO
+    UPDATE SET
+    value = EXCLUDED.value;
+    """
+
     select_user_trips = """
     SELECT trip_id, start_date, end_date
     FROM trips WHERE user_id = %(user_id)s

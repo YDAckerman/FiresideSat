@@ -12,16 +12,11 @@
   <body>
     {{macros.make_nav_bar('users') }}
     <div class="center-options">
-      <form class="form-box"
-            action="{{ url_for('register') }}"
-            method = "post">
-        <fieldset>
-            <legend>Register a User</legend>          
-            <!-- <div class="form-field"> -->
-            <!--     <label for="usr_email">Email Address:</label> -->
-            <!--     <input type="email" id="usr_email" -->
-            <!--            name="email" required> -->
-            <!-- </div> -->
+      <fieldset>
+          <legend>Register a User</legend>          
+          <form class="form-box"
+                action="{{ url_for('register') }}"
+                method = "post">
             <div class="form-field">
                 <label for="usr_mapshare_id">MapShare ID:</label>
                 <input type="text" pattern="^[0-9a-zA-Z].*"
@@ -37,11 +32,31 @@
             <div class="submit-button">
               <input type="submit" value="Register">
             </div>
-            {% block response %}
+          </form>
+      </fieldset>
+      </div>
+      <div class="center-options">
+      <fieldset>
+         <legend>Set airnow.gov API Key</legend>          
+          <form class="form-box"
+                action="{{ url_for('set_aqi_key') }}"
+                method = "post">
+            <div class="form-field">
+                <label for="usr_mapshare_id">API Key:</label>
+                <input type="text" pattern="^[0-9a-zA-Z].*"
+                       id="airnow_key"
+                       name="airnow_key" required>
+            </div>
+            <div class="submit-button">
+              <input type="submit" value="Set" style="width: 100px;">
+            </div>
+          </form>
+      </fieldset>
+      </div>
+    <div class="center-options">
+      {% block response %}
             <div> {{result.message}} </div>
-            {% endblock %}
-            </fieldset>
-      </form>
+      {% endblock %}
     </div>
   </body>
 </html>

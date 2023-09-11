@@ -2,8 +2,11 @@ from flask import Flask, render_template, request
 from core.result import Result
 from core.user import User
 from core.trip import Trip
-from core.db import init_app as db_init_app, get_conn
+from core.db import init_app as db_init_app, get_conn, db_submit
+from core.sql_queries import SqlQueries
+
 import json
+import requests
 
 EMPTY_RESULT = Result(None, "")
 CFG_FILE_PATHS = ["./configs/{}.json".format(x) for x in ['prod', 'test']]
@@ -38,7 +41,38 @@ def register():
     usr = User(request.form.get('mapshare_id'),
                request.form.get('mapshare_password'))
     register_result = usr.register(debug=app.config['DEBUG'])
+
     return render_template("users.html", result=register_result)
+
+
+@app.route('/set_aqi_key', methods=['POST'])
+def set_aqi_key():
+
+    aqi_result = EMPTY_RESULT
+    airnow_key = request.form.get('airnow_key')
+
+    # test the given key
+    test_endpoint = 'https://www.airnowapi.org/' \
+        + 'aq/observation/zipCode/current/' \
+        + '?format=application/json' \
+        + '&zipCode=94703' \
+        + f'&API_KEY={airnow_key}'
+    resp_status = requests.get(test_endpoint).status_code
+
+    if resp_status == 200:
+        # if it works, send it to the database
+        get_conn()
+        qrys = SqlQueries()
+        aqi_result = db_submit(qrys.upsert_airnow_key,
+                               {'airnow_key': airnow_key},
+                               Result(True, "Key set successfully"))
+
+    else:
+        # otherwise return an error result
+        aqi_result = Result(False, 'API Key did not work (status:'
+                            + f' {resp_status})')
+
+    return render_template("users.html", result=aqi_result)
 
 
 @app.route('/trips')

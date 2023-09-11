@@ -101,13 +101,15 @@ def elt_mapshare_locs(endpoint, pg_conn, pg_cur, context, log):
 
 def elt_aqi(endpoint, pg_conn, pg_cur, log, records, sql_query):
 
+    airnow_key = pg_cur.execute(sql.select_airnow_api_key)[0][0]
+
     for record in records:
 
         spatial_object_id, lon, lat, rad = record
 
         endpoint.set_route(lat=lat, lon=lon,
                            radius_miles=rad,
-                           key=Variable.get('airnow_api_key'))
+                           key=airnow_key)
         endpt_resp = json.loads(endpoint.get().text)
 
         if endpt_resp:

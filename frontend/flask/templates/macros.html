@@ -18,7 +18,7 @@
     align="center"
     color="black">
 
-<form class="form-box" method="post">
+<form class="form-box">
     <div class = "trip-field">  
     <div class="form-field">
       <input type="hidden"
@@ -49,11 +49,13 @@
     <div class="submit-button">
       <input type="submit"
              formaction="{{ url_for('update_trip') }}"
+             formmethod="post"
              value="Update">
     </div>
     <div class="submit-button">
       <input type="submit"
              formaction="{{ url_for('delete_trip') }}"
+             formmethod="post"
              value="Delete">
     </div>
     </div>

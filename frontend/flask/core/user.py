@@ -2,7 +2,6 @@ from .db import db_submit, db_extract
 from .result import Result
 from .trip import Trip
 from .sql_queries import SqlQueries
-from datetime import datetime
 
 from seleniumwire import webdriver
 from selenium.webdriver.support.ui import WebDriverWait
@@ -57,6 +56,7 @@ class User():
     def add_trip(self, new_trip):
 
         check_overlap = [t.intersects(new_trip) for t in self.trips]
+
         if sum(check_overlap) != 0:
             return Result(None, "Trips Cannot Overlap")
 

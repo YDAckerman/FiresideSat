@@ -3,33 +3,29 @@
 
 class SqlQueries:
 
-    def __init__(self, test=False):
+    # def __init__(self, test=False):
 
-        if test:
-            schema = "test"
-        else:
-            schema = "public"
+    #     if test:
+    #         schema = "test"
+    #     else:
+    #         schema = "public"
 
-        self.current_schema = schema
-        self.set_schema = f"SET search_path TO {schema};"
-        self.unset_schema = "SET search_path TO public;"
-        print(f"running sql queries on schema {schema}")
+    #     self.current_schema = schema
+    #     self.set_schema = f"SET search_path TO {schema};"
+    #     self.unset_schema = "SET search_path TO public;"
+    #     print(f"running sql queries on schema {schema}")
 
-        self.create_schema = f"""
-        CREATE SCHEMA IF NOT EXISTS {schema};
-        """
+    #     self.create_schema = f"""
+    #     CREATE SCHEMA IF NOT EXISTS {schema};
+    #     """
 
-    create_test_schema = """
-    CREATE SCHEMA IF NOT EXISTS text;
-    """
+    # set_test_search_path = """
+    # SET search_path TO test;
+    # """
 
-    set_test_search_path = """
-    SET search_path TO test;
-    """
-
-    unset_test_search_path = """
-    SET search_path TO public;
-    """
+    # unset_test_search_path = """
+    # SET search_path TO public;
+    # """
 
     drop_current_tables = """
     DROP TABLE IF EXISTS current_incidents;
@@ -53,6 +49,17 @@ class SqlQueries:
     DROP TABLE IF EXISTS incident_reports;
     DROP TABLE IF EXISTS trip_state_reports;
     DROP TABLE IF EXISTS user_aqi_reports;
+    """
+
+    drop_variable_table = """
+    DROP TABLE IF EXISTS variables;
+    """
+
+    create_variable_table = """
+    CREATE TABLE IF NOT EXISTS variables (
+    name    varchar(256)   PRIMARY KEY
+    value   varchar(256)
+    );
     """
 
     create_report_tables = """
@@ -353,6 +360,11 @@ class SqlQueries:
 
     select_current_incident_ids = """
     SELECT incident_id FROM current_incidents;
+    """
+
+    select_airnow_api_key = """
+    SELECT value FROM variables
+    WHERE name = 'airnow_api_key';
     """
 
     # this may no longer be necessary
