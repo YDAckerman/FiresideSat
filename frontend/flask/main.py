@@ -23,14 +23,14 @@ def home():
     return render_template("index.html")
 
 
-@app.route('/users')
-def users():
-    return render_template("users.html", result=EMPTY_RESULT)
+@app.route('/admin')
+def admin():
+    return render_template("admin.html", result=EMPTY_RESULT)
 
 
 @app.route('/change_mapshare_pw', methods=['POST'])
 def change_mapshare_pw():
-    return render_template("users.html", result=EMPTY_RESULT)
+    pass
 
 
 @app.route('/register', methods=['POST'])
@@ -42,7 +42,17 @@ def register():
                request.form.get('mapshare_password'))
     register_result = usr.register(debug=app.config['DEBUG'])
 
-    return render_template("users.html", result=register_result)
+    return render_template("admin.html", result=register_result)
+
+
+@app.route('/set_user_alert_radius', methods=['POST'])
+def set_user_alert_radius():
+    pass
+
+
+@app.route('/update_user_states', methods=['POST'])
+def update_user_states():
+    pass
 
 
 @app.route('/set_aqi_key', methods=['POST'])
@@ -52,6 +62,7 @@ def set_aqi_key():
     airnow_key = request.form.get('airnow_key')
 
     # test the given key
+    # todo: put this operation somewhere else
     test_endpoint = 'https://www.airnowapi.org/' \
         + 'aq/observation/zipCode/current/' \
         + '?format=application/json' \
@@ -72,63 +83,53 @@ def set_aqi_key():
         aqi_result = Result(False, 'API Key did not work (status:'
                             + f' {resp_status})')
 
-    return render_template("users.html", result=aqi_result)
+    return render_template("admin.html", result=aqi_result)
 
 
-@app.route('/trips')
-def trips():
-    return render_template("trips.html", result=EMPTY_RESULT)
+@app.route('/users')
+def users():
+    return render_template("users.html", result=EMPTY_RESULT)
 
 
-@app.route('/user_trips', methods=['POST'])
-def user_trips():
+@app.route('/load_user_settings', methods=['POST'])
+def load_user_settings():
 
     get_conn()
-    user_result = EMPTY_RESULT
-    trip_result = EMPTY_RESULT
-    user_trips = []
 
     # get user form data
     current_mapshare_id = request.form.get('mapshare_id')
     usr = User(mapshare_id=current_mapshare_id)
+    user_result = usr.exists()
 
-    if not usr.exists:
-        user_result = Result(None, "User does not exist")
+    if user_result.status:
 
+        return render_template("user_settings.html",
+                               current_mapshare_id=current_mapshare_id,
+                               user_result=user_result,
+                               trip_result=EMPTY_RESULT,
+                               user_trips=usr.trips)
     else:
-        if len(usr.trips) == 0:
-            trip_result = Result(None, "There are no trips to display")
-        else:
-            user_trips = usr.trips
 
-    return render_template("user_trips.html",
-                           current_mapshare_id=current_mapshare_id,
-                           user_result=user_result,
-                           trip_result=trip_result,
-                           user_trips=user_trips)
+        return render_template("users.html", result=user_result)
 
 
 @app.route('/add_trip', methods=['POST'])
 def add_trip():
 
     get_conn()
-    user_result = EMPTY_RESULT
-    trip_result = EMPTY_RESULT
 
     # get user form data
     current_mapshare_id = request.form.get('mapshare_id')
     usr = User(mapshare_id=current_mapshare_id)
+    user_result = usr.exists()
 
-    if not usr.exists:
-        user_result = Result(None, "User does not exist")
+    new_trip = Trip.from_strs("0",
+                              request.form.get('trip_state'),
+                              request.form.get('trip_start'),
+                              request.form.get('trip_end'))
+    trip_result = usr.add_trip(new_trip)
 
-    else:
-        new_trip = Trip.from_strs("0",
-                                  request.form.get('trip_start'),
-                                  request.form.get('trip_end'))
-        trip_result = usr.add_trip(new_trip)
-
-    return render_template("user_trips.html",
+    return render_template("user_settings.html",
                            current_mapshare_id=current_mapshare_id,
                            user_result=user_result,
                            trip_result=trip_result,
@@ -139,23 +140,18 @@ def add_trip():
 def update_trip():
 
     get_conn()
-    user_result = EMPTY_RESULT
-    trip_result = EMPTY_RESULT
 
     # get user form data
     current_mapshare_id = request.form.get('mapshare_id')
     usr = User(mapshare_id=current_mapshare_id)
+    user_result = usr.exists()
+    trip = Trip.from_strs(request.form.get('trip_id'),
+                          request.form.get('trip_state'),
+                          request.form.get('trip_start'),
+                          request.form.get('trip_end'))
+    trip_result = usr.update_trip(trip)
 
-    if not usr.exists:
-        user_result = Result(None, "User does not exist")
-
-    else:
-        trip = Trip.from_strs(request.form.get('trip_id'),
-                              request.form.get('trip_start'),
-                              request.form.get('trip_end'))
-        trip_result = usr.update_trip(trip)
-
-    return render_template("user_trips.html",
+    return render_template("user_settings.html",
                            current_mapshare_id=current_mapshare_id,
                            user_result=user_result,
                            trip_result=trip_result,
@@ -166,21 +162,15 @@ def update_trip():
 def delete_trip():
 
     get_conn()
-    user_result = EMPTY_RESULT
-    trip_result = EMPTY_RESULT
 
     # get user form data
     current_mapshare_id = request.form.get('mapshare_id')
     usr = User(mapshare_id=current_mapshare_id)
+    user_result = usr.exists()
+    trip_id = request.form.get('trip_id')
+    trip_result = usr.delete_trip(trip_id)
 
-    if not usr.exists:
-        user_result = Result(None, "User does not exist")
-
-    else:
-        trip_id = request.form.get('trip_id')
-        trip_result = usr.delete_trip(trip_id)
-
-    return render_template("user_trips.html",
+    return render_template("user_settings.html",
                            current_mapshare_id=current_mapshare_id,
                            user_result=user_result,
                            trip_result=trip_result,

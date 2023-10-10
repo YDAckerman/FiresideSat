@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+        <title>fireside sat</title>
+        <meta charset="utf-8"/>
+        <meta name="viewport" content="width=device-width,
+                                       initial-scale=1.0"/>
+        <link rel="stylesheet" href="{{ url_for('static',
+                                     filename='css/styles.css')}}">
+        <link rel="stylesheet" href="{{ url_for('static',
+                                     filename='css/top_nav.css')}}">
+        {% import "macros.html" as macros %}
+  </head>
+  <body>
+    {{macros.make_nav_bar('admin') }}
+    <div class="option">
+      <fieldset>
+          <legend>Register a User</legend>          
+          <form class="form-box"
+                action="{{ url_for('register') }}"
+                method = "post">
+            <div class="form-field" style="margin-right: 1em;">
+                <label for="usr_mapshare_id">MapShare ID:</label>
+                <input type="text" pattern="^[0-9a-zA-Z].*"
+                       id="usr_mapshare_id"
+                       name="mapshare_id" required>
+            </div>
+            <div class="form-field">
+                <label for="usr_mapshare_pw">MapShare Password:</label>
+                <input type="text" pattern="^[0-9a-zA-Z].*"
+                       id="usr_mapshare_pw"
+                       name="mapshare_password" required>
+            </div>
+            <div class="submit-buttons" style="margin-top: 1em;">
+              <input type="submit" value="Register">
+            </div>
+          </form>
+      </fieldset>
+      </div>
+      <div class="option">
+      <fieldset>
+         <legend>Set airnow.gov API Key</legend>          
+          <form class="form-box"
+                action="{{ url_for('set_aqi_key') }}"
+                method = "post">
+            <div class="form-field">
+                <label for="usr_mapshare_id">API Key:</label>
+                <input type="text" pattern="^[0-9a-zA-Z].*"
+                       id="airnow_key"
+                       name="airnow_key" required>
+            </div>
+            <div class="submit-button" style="margin-left: 1em;">
+              <input type="submit" value="Set" style="width: 100px;">
+            </div>
+          </form>
+      </fieldset>
+      </div>
+    <div class="option bold">
+      {% block response %}
+            <div> {{result.message}} </div>
+      {% endblock %}
+    </div>
+  </body>
+</html>

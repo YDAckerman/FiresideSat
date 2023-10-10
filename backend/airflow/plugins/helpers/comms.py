@@ -8,9 +8,6 @@ import json
 # from selenium.webdriver.common.by import By
 # from selenium.webdriver.support import expected_conditions as EC
 
-# MAX_DIST_M = 1220000
-MAX_DIST_M = 354055 # meters
-
 
 class CommsProcess():
 
@@ -32,13 +29,15 @@ class CommsProcess():
         report_factory = ReportFactory(report_type, current_date)
 
         pg_cur.execute(report_factory.get_records_sql(),
-                       {'current_date': current_date,
-                        'max_distance_m': MAX_DIST_M})
+                       {'current_date': current_date})
 
         report_records = pg_cur.fetchall()
+
+        print("number of reports: " + str(len(report_records)))
         for record in report_records:
 
             report = report_factory.make_report(record)
+            print(report.message)
             endpt_resp = report.send(endpoint)
 
             if endpt_resp and json.loads(endpt_resp.text)['success']:

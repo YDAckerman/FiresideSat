@@ -51,6 +51,7 @@ class SqlQueries:
     DROP TABLE IF EXISTS user_aqi_reports;
     """
 
+    # todo: change to admin_settings
     drop_variable_table = """
     DROP TABLE IF EXISTS variables;
     """
@@ -582,15 +583,16 @@ class SqlQueries:
             AND t1.date = t2.last_update
            ) latest_points
     ON   active_trips.trip_id = latest_points.trip_id
-    -- these are here because of some testing points
-    -- they are redundant otherwise.
-    -- AND  latest_points.last_update >= active_trips.start_date
-    -- AND  latest_points.last_update <= active_trips.end_date
+    JOIN (SELECT user_id, setting_value::numeric AS alert_radius
+          FROM user_settings
+          WHERE setting_name = 'alert_radius_meters'
+         ) usr_rules
+    ON active_trips.user_id = usr_rules.user_id
+    -- total_acres should never be null...
     JOIN (SELECT * FROM current_incidents WHERE total_acres IS NOT NULL) ci
     ON   ST_DWithin(latest_points.last_location::geography,
                     ci.centroid::geography,
-                    %(max_distance_m)s --meters
-                    )
+                    usr_rules.alert_radius)
     JOIN (
           SELECT c1.incident_id, c1.geom,
                  c1.date + ((c1.hour)::varchar(256) || ' hour')::interval

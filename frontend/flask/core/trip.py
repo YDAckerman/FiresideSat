@@ -18,8 +18,12 @@ class Trip():
     def contains(self, date):
         return self.start_date <= date and self.end_date >= date
 
+    def consistent(self):
+        return self.start_date < self.end_date
+
     @classmethod
-    def from_strs(cls, trip_id: str, start_date: str, end_date: str):
+    def from_strs(cls, trip_id: str, state: str,
+                  start_date: str, end_date: str):
 
         try:
             trip_id = int(trip_id)

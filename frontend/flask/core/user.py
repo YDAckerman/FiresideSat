@@ -14,9 +14,15 @@ import re
 
 qrys = SqlQueries()
 
+# possible results
 MAPSHARE_EXISTS = Result(False, 'Mapshare ID already in use.')
 REG_SUCCESS = Result(True, 'Check your satphone for confirmation.')
 INVALID_CREDS = Result(False, 'Registration Failed. Invalid Credentials.')
+USR_DOES_NOT_EXIST = Result(False, "User does not exist")
+TRIPS_OVERLAP = Result(False, "Trips Cannot Overlap")
+TRIP_BAD_DATE_ORDER = Result(False, "Trips Must Start Before They End")
+TRIP_ADDED = Result(True, "Trip Added")
+EMPTY_RESULT = Result(None, "")
 
 
 class User():
@@ -55,17 +61,23 @@ class User():
 
     def add_trip(self, new_trip):
 
+        if not self._exists:
+            return EMPTY_RESULT
+
         check_overlap = [t.intersects(new_trip) for t in self.trips]
 
         if sum(check_overlap) != 0:
-            return Result(None, "Trips Cannot Overlap")
+            return TRIPS_OVERLAP
+
+        if not new_trip.consistent():
+            return TRIP_BAD_DATE_ORDER
 
         db_res = db_submit(qrys.insert_new_trip,
                            {'user_id': self.user_id,
                             'device_id': self.device_id,
                             'start_date': new_trip.start_date,
                             'end_date': new_trip.end_date},
-                           Result(True, "Trip Added"))
+                           TRIP_ADDED)
 
         if db_res.status:
             self._get_trips()
@@ -73,6 +85,9 @@ class User():
         return db_res
 
     def delete_trip(self, trip_id):
+
+        if not self._exists:
+            return EMPTY_RESULT
 
         db_res = db_submit(qrys.delete_trip,
                            {'trip_id': trip_id},
@@ -85,11 +100,17 @@ class User():
 
     def update_trip(self, trip):
 
+        if not self._exists:
+            return EMPTY_RESULT
+
         check_overlap = [t.intersects(trip) for t in self.trips
                          if t.trip_id != trip.trip_id]
 
         if sum(check_overlap) != 0:
             return Result(None, "Trips Cannot Overlap")
+
+        if not trip.consistent():
+            return Result(None, "Trips Must Start Before They End")
 
         db_res = db_submit(qrys.update_trip,
                            {'trip_id': trip.trip_id,
@@ -105,8 +126,15 @@ class User():
     def get_mapshare_id(self):
         return self.credentials['mapshare_id']
 
-    def exists(self):
+    def _exists(self):
         return bool(self.user_id)
+
+    def exists(self):
+        if self._exists:
+            return Result(True, "Editing Data for Mapshare" +
+                          f" ID: {self.credentials['mapshare_id']}")
+        else:
+            return USR_DOES_NOT_EXIST
 
     def delete(self):
         return db_submit(qrys.delete_user,

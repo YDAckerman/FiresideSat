@@ -22,7 +22,8 @@ class SqlQueries():
 
     insert_new_trip = """
     INSERT INTO trips (user_id, device_id, start_date, end_date)
-    VALUES (%(user_id)s, %(device_id)s, %(start_date)s, %(end_date)s);
+    VALUES (%(user_id)s, %(device_id)s,
+            %(start_date)s, %(end_date)s);
     """
 
     delete_trip = """

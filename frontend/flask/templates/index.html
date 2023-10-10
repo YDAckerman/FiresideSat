@@ -8,24 +8,29 @@
         <link rel="stylesheet"
               href="{{ url_for('static',
                     filename='css/styles.css')}}">
+        <link rel="stylesheet" href="{{ url_for('static',
+                                     filename='css/top_nav.css')}}">
         {% import "macros.html" as macros %}
   </head>
   <body>
     {{ macros.make_nav_bar('home') }}
-    <div class='center-options'>
+
+    <div class="option">
       <div style='width: 100%; display: flex; justify-content: center;'>
         <p style='font-weight: bold; font-size:30px;'>
              FiresideSat
         </p>
       </div>
     </div>
-    <div class='center-options'>
-        <div style='width: 100%; margin-top: 20px; display: flex;
-                    justify-content: center;'>
-          <img src="../static/fdr_forest_fire.png"
-               width="800";
-               alt="FDR sitting in a rocking chair in a forest fire.">
-        </div>
+    <div class="option">
+      <div style='width: 100%; 
+                  display: flex;
+                  margin-top: -10px;
+                  justify-content: center;'>
+        <img src="../static/fdr_forest_fire.png"
+             width="800";
+             alt="FDR sitting in a rocking chair in a forest fire.">
+      </div>
     </div>
   </body>
 </html>
