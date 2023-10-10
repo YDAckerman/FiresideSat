@@ -1,15 +1,15 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
-        <title>FiresideSat</title>
-        <meta charset="utf-8"/>
-        <meta name="viewport" content="width=device-width,
-                                       initial-scale=1.0"/>
-        <link rel="stylesheet" href="{{ url_for('static',
-                                     filename='css/styles.css')}}">
-        <link rel="stylesheet" href="{{ url_for('static',
-                                     filename='css/top_nav.css')}}">
-        {% import "macros.html" as macros %}
+    <title>FiresideSat</title>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width,
+                                   initial-scale=1.0"/>
+    <link rel="stylesheet" href="{{ url_for('static',
+                                 filename='css/styles.css')}}">
+    <link rel="stylesheet" href="{{ url_for('static',
+                                 filename='css/top_nav.css')}}">
+    {% import "macros.html" as macros %}
   </head>
   <body>
     {{ macros.make_nav_bar('users') }}
@@ -17,31 +17,31 @@
     <div class="option">
       <fieldset>
         <legend>Change User</legend>
-            <form class="form-box"
-                  action="{{ url_for('load_user_settings') }}"
-                  method = "post">
-              <div class="form-field">
-                      <label for="usr_mapshare_id">MapShare ID:</label>
-                      <input type="text"
-                             pattern="^[0-9a-zA-Z].*"
-                             value=" "
-                             id="usr_mapshare_id"
-                             name="mapshare_id" required>
-              </div>
-              <div class="submit-buttons">
-                  <input type="submit" value="Change">
-              </div>
-            </form>
+        <form class="form-box"
+              action="{{ url_for('load_user_settings') }}"
+              method = "post">
+          <div class="form-field">
+            <label for="usr_mapshare_id">MapShare ID:</label>
+            <input type="text"
+                   pattern="^[0-9a-zA-Z].*"
+                   value=" "
+                   id="usr_mapshare_id"
+                   name="mapshare_id" required>
+          </div>
+          <div class="submit-buttons">
+            <input type="submit" value="Change">
+          </div>
+        </form>
       </fieldset>
 
     </div>
 
     <div class="option bold">
-        <div style="width: 100%; text-align: center;">
-          {% block user_response %}
-                {{user_result.message}}
-          {% endblock %}
-        </div>
+      <div style="width: 100%; text-align: center;">
+        {% block user_response %}
+        {{user_result.message}}
+        {% endblock %}
+      </div>
     </div>
 
     <div class="option">
@@ -50,9 +50,16 @@
         <form class="form-box"
               method="post"
               action="{{ url_for('set_user_alert_radius') }}">
+          <div style="display: none;">
+            <input type="hidden"
+                   value="{{user.get_mapshare_id()}}" 
+                   id="mapshare_id"
+                   name="mapshare_id"
+                   readonly>
+          </div>
           <div class="form-entry">
             <input type="number"
-                   value="25"
+                   value="{{ user.get_radius() }}"
                    min="10"
                    max="100"
                    id="usr_alert_radius"
@@ -67,9 +74,13 @@
       </fieldset>
     </div>
 
+    <div class="option bold">
+      {% block radius_response %}
+      <div> {{radius_result.message}} </div>
+      {% endblock %}
+    </div>
 
     <div class="option">
-
       <fieldset>
         <legend> States </legend>
         <div style="width: 100%; text-align: center; margin-bottom: 1em;">
@@ -78,7 +89,14 @@
         <form class="form-box"
               method="post"
               action="{{ url_for('update_user_states') }}">
-          {{ macros.select_state(['CA', 'OR', 'WA']) }}
+          <div style="display: none;">
+            <input type="hidden"
+                   value="{{user.get_mapshare_id()}}"
+                   id="mapshare_id"
+                   name="mapshare_id"
+                   readonly>
+          </div>
+          {{ macros.select_state( user.get_states() )}}
           <div style="width:100%; display: flex; justify-content: center;">
             <div class="submit-buttons" style="max-height: 2em;">
               <input type="submit" value="Update">
@@ -86,52 +104,72 @@
           </div>
         </form>
       </fieldset>
-      
     </div>
-      
+
+    <div class="option bold">
+      {% block state_response %}
+      <div> {{state_result.message}} </div>
+      {% endblock %}
+    </div>
+    
     <div class="option">
       <fieldset>
         <legend> Trips </legend>
         
         <form class="form-box" method="post"
               action="{{ url_for('add_trip') }}">
-            <div style="display: none;">
-              <input type="hidden"
-                     value="{{current_mapshare_id}}" 
-                     id="mapshare_id"
-                     name="mapshare_id"
-                     readonly>
-            </div>
-            <div class="form-entry" style="margin-right: 1em;">
-                <label for="trip_start">Start Date: </label>
-                <input type="date" id="trip_start"
-                       name="trip_start" required>
-            </div>
-            <div class="form-entry">
-                <label for="trip_end">End Date: </label>
-                <input type="date" id="trip_end"
-                       name="trip_end" required>
-            </div>
-            <div class="submit-buttons">
-              <input type="submit" value="Add">
-            </div>
+          <div style="display: none;">
+            <input type="hidden"
+                   value="{{user.get_mapshare_id()}}" 
+                   id="mapshare_id"
+                   name="mapshare_id"
+                   readonly>
+          </div>
+          <div class="form-entry" style="margin-right: 1em;">
+            <label for="trip_start">Start Date: </label>
+            <input type="date" id="trip_start"
+                   name="trip_start" required>
+          </div>
+          <div class="form-entry">
+            <label for="trip_end">End Date: </label>
+            <input type="date" id="trip_end"
+                   name="trip_end" required>
+          </div>
+          <div class="submit-buttons">
+            <input type="submit" value="Add">
+          </div>
         </form>
 
-      {% for trip in user_trips %}
-        {{ macros.make_update_trip_input(current_mapshare_id, trip) }}
-      {% endfor %}
+        {% for trip in user.get_trips() %}
+        {{ macros.make_update_trip_input(user.get_mapshare_id(), trip) }}
+        {% endfor %}
 
       </fieldset>
-
-
-      
     </div>
 
-
     <div class="option bold">
-         {% block trip_response %}
-            <div> {{trip_result.message}} </div>
-         {% endblock %}
+      {% block trip_response %}
+      <div> {{trip_result.message}} </div>
+      {% endblock %}
+    </div>
+
+    <div class="option">
+      <fieldset>
+        <legend> Delete </legend>
+        <form class="form-box" method="post"
+              action="{{ url_for('delete_user') }}">
+          <div style="display: none;">
+            <input type="hidden"
+                   value="{{user.get_mapshare_id()}}" 
+                   id="mapshare_id"
+                   name="mapshare_id"
+                   readonly>
+          </div>
+          <div class="submit-buttons">
+            <input type="submit" value="Delete">
+          </div>
+        </form>
+        </fieldset>
     </div>
   </body>
   

@@ -70,4 +70,41 @@ class SqlQueries():
     delete_user = """
     DELETE FROM users WHERE user_id = %(user_id)s;
     DELETE FROM trips WHERE user_id = %(user_id)s;
+    DELETE FROM user_settings WHERE user_id = %(user_id)s;
+    """
+
+    insert_default_settings = """
+    INSERT INTO user_settings (user_id, setting_name, setting_value)
+    VALUES (%(user_id)s, 'alert_radius_meters', 40233.6),
+           (%(user_id)s, 'include_state', 'CA')
+    """
+
+    insert_alert_radius = """
+    INSERT INTO user_settings (user_id, setting_name, setting_value)
+    VALUES (%(user_id)s, 'alert_radius_meters', %(radius)s);
+    """
+
+    get_alert_radius_setting = """
+    SELECT setting_value FROM user_settings
+    WHERE user_id = %(user_id)s AND setting_name = 'alert_radius_meters';
+    """
+
+    delete_alert_radius_setting = """
+    DELETE FROM user_settings
+    WHERE user_id = %(user_id)s and setting_name = 'alert_radius_meters';
+    """
+
+    insert_state_settings = """
+    INSERT INTO user_settings (user_id, setting_name, setting_value)
+    VALUES %s;
+    """
+
+    get_state_settings = """
+    SELECT setting_value FROM user_settings
+    WHERE user_id = %(user_id)s AND setting_name = 'include_state';
+    """
+
+    delete_state_settings = """
+    DELETE FROM user_settings
+    WHERE user_id = %(user_id)s and setting_name = 'include_state';
     """

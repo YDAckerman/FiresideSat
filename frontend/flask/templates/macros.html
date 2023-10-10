@@ -27,16 +27,16 @@
   'LA', 'MA', 'MD', 'ME', 'MI', 'MN',
   'MO', 'MS', 'MT', 'NC', 'ND', 'NE',
   'NH', 'NJ', 'NM', 'NV', 'NY', 'OH',
-  'OK', 'OR', 'PA', 'RI', 'SC', 'SD',
+  'OK', 'OR', 'PA', 'PR', 'RI', 'SC', 'SD',
   'TN', 'TX', 'UT', 'VA', 'VT', 'WA',
   'WI', 'WV', 'WY' ] %}
   {% if state in user_states %}
-  <label><input name="user-states" id="user-states"
+  <label><input name="user_states" id="user_states"
                 type="checkbox" value="{{state}}" checked>
     {{state}}
   </label>
   {% else %}
-  <label><input name="user-states" id="user-states"
+  <label><input name="user_states" id="user_states"
                 type="checkbox" value="{{state}}">
     {{state}}
   </label>

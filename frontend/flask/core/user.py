@@ -1,4 +1,4 @@
-from .db import db_submit, db_extract
+from .db import db_submit, db_submit_many, db_extract
 from .result import Result
 from .trip import Trip
 from .sql_queries import SqlQueries
@@ -10,9 +10,14 @@ from selenium.webdriver.support import expected_conditions as EC
 import requests
 from pykml import parser
 import re
+import math
 
 
 qrys = SqlQueries()
+
+# Numeric constants
+METERS_PER_MILE = 1609.344
+MILES_PER_METER = 0.0006213712
 
 # possible results
 MAPSHARE_EXISTS = Result(False, 'Mapshare ID already in use.')
@@ -44,20 +49,68 @@ class User():
         if self.user_id:
             self.device_id = self._get_device_id()
             self._get_trips()
+            self._get_radius()
+            self._get_states()
 
-    def _update_mapshare_pw(self, new_pw):
-        pass
+    # -#-------------------------------------------------------------------#- #
+    # -      public methods                                                 - #
+    # -#-------------------------------------------------------------------#- #
 
-    def _get_user_id(self):
-        return db_extract(qrys.select_user_id,
-                          self.credentials)[0][0]
+    def get_radius(self):
+        return self.radius_mi
 
-    def _get_trips(self):
+    def get_states(self):
+        return self.states
 
-        trip_data = db_extract(qrys.select_user_trips,
-                               {'user_id': self.user_id})
-        if trip_data:
-            self.trips = [Trip(*datum) for datum in trip_data]
+    def get_mapshare_id(self):
+        return self.credentials['mapshare_id']
+
+    def get_trips(self):
+        return self.trips
+
+    def update_alert_radius_setting(self, radius_miles):
+
+        if not self._exists:
+            return EMPTY_RESULT
+
+        del_res = db_submit(qrys.delete_alert_radius_setting,
+                            {'user_id': self.user_id},
+                            Result(True, "Alert Settings Deleted"))
+
+        if not del_res.status:
+            return del_res
+
+        radius_meters = float(radius_miles) * METERS_PER_MILE
+        submit_res = db_submit(qrys.insert_alert_radius,
+                               {'user_id': self.user_id,
+                                'radius': radius_meters},
+                               Result(True, 'Alert Radius Updated'))
+
+        if submit_res.status:
+            self.radius_mi = radius_miles
+
+        return submit_res
+
+    def update_state_setting(self, states):
+
+        if not self._exists:
+            return EMPTY_RESULT
+
+        del_res = db_submit(qrys.delete_state_settings,
+                            {'user_id': self.user_id},
+                            Result(True, "State Settings Deleted"))
+
+        if not del_res.status:
+            return del_res
+
+        data = [(self.user_id, 'include_state', state) for state in states]
+        submit_res = db_submit_many(qrys.insert_state_settings, data,
+                                    Result(True, "State Settings Updated"))
+
+        if submit_res.status:
+            self.states = states
+
+        return submit_res
 
     def add_trip(self, new_trip):
 
@@ -123,14 +176,8 @@ class User():
 
         return db_res
 
-    def get_mapshare_id(self):
-        return self.credentials['mapshare_id']
-
-    def _exists(self):
-        return bool(self.user_id)
-
     def exists(self):
-        if self._exists:
+        if self._exists():
             return Result(True, "Editing Data for Mapshare" +
                           f" ID: {self.credentials['mapshare_id']}")
         else:
@@ -179,8 +226,57 @@ class User():
             return dev_reg_res
         self.device_id = self._get_device_id()
 
+        # set state and alert radius defaults
+        settings_res = self._set_default_settings()
+        if not settings_res.status:
+            return settings_res
+
         # send success message
         return REG_SUCCESS
+
+    def update_mapshare_pw(self, new_pw):
+        pass
+
+    # -#-----------------------------------------------------------------#- #
+    # -      private methods                                              - #
+    # -#-----------------------------------------------------------------#- #
+
+    def _exists(self):
+        return bool(self.user_id)
+
+    def _get_user_id(self):
+        return db_extract(qrys.select_user_id,
+                          self.credentials)[0][0]
+
+    def _get_trips(self):
+
+        trip_data = db_extract(qrys.select_user_trips,
+                               {'user_id': self.user_id})
+        if trip_data:
+            self.trips = [Trip(*datum) for datum in trip_data]
+
+    def _get_radius(self):
+
+        radius_mt_str = db_extract(qrys.get_alert_radius_setting,
+                                   {'user_id': self.user_id})[0][0]
+        if radius_mt_str:
+            self.radius_mi = math.floor(float(radius_mt_str) * MILES_PER_METER)
+
+    def _get_states(self):
+
+        states = db_extract(qrys.get_state_settings,
+                            {'user_id': self.user_id})
+
+        if states:
+            self.states = [state[0] for state in states]
+        else:
+            self.states = []
+
+    def _set_default_settings(self):
+
+        return db_submit(qrys.insert_default_settings,
+                         self.user_id,
+                         Result(True, "User Settings Added"))
 
     def _register(self):
         return db_submit(qrys.insert_new_usr,
@@ -198,6 +294,13 @@ class User():
     def _get_device_id(self):
         return db_extract(qrys.select_device_id,
                           {'user_id': self.user_id})[0][0]
+
+    def _send_registration_confirmation(self):
+        # I wasn't able to figure out a
+        # way to get the garmin_device_id other than to
+        # send a message to the device and pull data from the request body.
+        success_msg = "Registration Successful!"
+        return self._send_message(self.credentials, success_msg)
 
     @staticmethod
     def _get_device_imei(credentials):
@@ -281,10 +384,3 @@ class User():
     def _extract_garmin_id(post_params):
         device_id_part = post_params.decode("UTF-8").split("&")[0]
         return re.findall(r'\d+', device_id_part)[0]
-
-    def _send_registration_confirmation(self):
-        # I wasn't able to figure out a
-        # way to get the garmin_device_id other than to
-        # send a message to the device and pull data from the request body.
-        success_msg = "Registration Successful!"
-        return self._send_message(self.credentials, success_msg)

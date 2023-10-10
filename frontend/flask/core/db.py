@@ -1,5 +1,6 @@
 
 import psycopg2
+from psycopg2.extras import execute_values
 from flask import current_app, g
 from .result import RESULT_DB_ERR
 
@@ -34,6 +35,18 @@ def db_submit(query, data, res):
     with conn.cursor() as cur:
         try:
             cur.execute(query, data)
+        except Exception as e:
+            print(e)
+            return RESULT_DB_ERR
+    conn.commit()
+    return res
+
+
+def db_submit_many(query, data, res):
+    conn = get_conn()
+    with conn.cursor() as cur:
+        try:
+            execute_values(cur, query, data)
         except Exception as e:
             print(e)
             return RESULT_DB_ERR

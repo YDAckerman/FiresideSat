@@ -33,6 +33,20 @@ def change_mapshare_pw():
     pass
 
 
+@app.route('/delete_user', methods=['POST'])
+def delete_user():
+    get_conn()
+
+    # get user form data
+    current_mapshare_id = request.form.get('mapshare_id')
+    usr = User(mapshare_id=current_mapshare_id)
+    user_result = usr.exists()
+
+    if not user_result.status:
+        return render_template("users.html", result=user_result)
+    return render_template("users.html", result=usr.delete())
+
+
 @app.route('/register', methods=['POST'])
 def register():
 
@@ -47,12 +61,44 @@ def register():
 
 @app.route('/set_user_alert_radius', methods=['POST'])
 def set_user_alert_radius():
-    pass
+
+    get_conn()
+
+    # get user form data
+    current_mapshare_id = request.form.get('mapshare_id')
+    usr = User(mapshare_id=current_mapshare_id)
+    user_result = usr.exists()
+
+    radius = request.form.get('usr_alert_radius')
+    radius_res = usr.update_alert_radius_setting(radius)
+
+    return render_template("user_settings.html",
+                           user_result=user_result,
+                           radius_result=radius_res,
+                           state_result=EMPTY_RESULT,
+                           trip_result=EMPTY_RESULT,
+                           user=usr)
 
 
 @app.route('/update_user_states', methods=['POST'])
 def update_user_states():
-    pass
+
+    get_conn()
+
+    # get user form data
+    current_mapshare_id = request.form.get('mapshare_id')
+    usr = User(mapshare_id=current_mapshare_id)
+    user_result = usr.exists()
+
+    states = request.form.getlist('user_states')
+    state_res = usr.update_state_setting(states)
+
+    return render_template("user_settings.html",
+                           user_result=user_result,
+                           radius_result=EMPTY_RESULT,
+                           state_result=state_res,
+                           trip_result=EMPTY_RESULT,
+                           user=usr)
 
 
 @app.route('/set_aqi_key', methods=['POST'])
@@ -104,10 +150,11 @@ def load_user_settings():
     if user_result.status:
 
         return render_template("user_settings.html",
-                               current_mapshare_id=current_mapshare_id,
                                user_result=user_result,
+                               radius_result=EMPTY_RESULT,
+                               state_result=EMPTY_RESULT,
                                trip_result=EMPTY_RESULT,
-                               user_trips=usr.trips)
+                               user=usr)
     else:
 
         return render_template("users.html", result=user_result)
@@ -130,10 +177,11 @@ def add_trip():
     trip_result = usr.add_trip(new_trip)
 
     return render_template("user_settings.html",
-                           current_mapshare_id=current_mapshare_id,
                            user_result=user_result,
+                           radius_result=EMPTY_RESULT,
+                           state_result=EMPTY_RESULT,
                            trip_result=trip_result,
-                           user_trips=usr.trips)
+                           user=usr)
 
 
 @app.route('/update_trip', methods=['POST'])
@@ -152,10 +200,11 @@ def update_trip():
     trip_result = usr.update_trip(trip)
 
     return render_template("user_settings.html",
-                           current_mapshare_id=current_mapshare_id,
                            user_result=user_result,
+                           radius_result=EMPTY_RESULT,
+                           state_result=EMPTY_RESULT,
                            trip_result=trip_result,
-                           user_trips=usr.trips)
+                           user=usr)
 
 
 @app.route('/delete_trip', methods=['POST'])
@@ -171,7 +220,8 @@ def delete_trip():
     trip_result = usr.delete_trip(trip_id)
 
     return render_template("user_settings.html",
-                           current_mapshare_id=current_mapshare_id,
                            user_result=user_result,
+                           radius_result=EMPTY_RESULT,
+                           state_result=EMPTY_RESULT,
                            trip_result=trip_result,
-                           user_trips=usr.trips)
+                           user=usr)
