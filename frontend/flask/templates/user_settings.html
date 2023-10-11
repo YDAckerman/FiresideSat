@@ -82,7 +82,7 @@
 
     <div class="option">
       <fieldset>
-        <legend> States </legend>
+        <legend> States/Regions </legend>
         <div style="width: 100%; text-align: center; margin-bottom: 1em;">
           Select all that apply:
         </div>
@@ -155,7 +155,51 @@
 
     <div class="option">
       <fieldset>
-        <legend> Delete </legend>
+        <legend> Change Mapshare Password </legend>
+        <form class="form-box" method="post">
+          <div style="display: none;">
+            <input type="hidden"
+                   value="{{user.get_mapshare_id()}}" 
+                   id="mapshare_id"
+                   name="mapshare_id"
+                   readonly>
+          </div>
+          <div class="form-entry">
+            <label for="old_password"> Old Password </label>
+            <input type="text"
+                   pattern="^[0-9a-zA-Z].*"
+                   value=""
+                   id="old_password"
+                   name="old_password" required>
+          </div>
+          <div class="form-entry" style="margin-left: 1em;">
+            <label for="new_password"> New Password </label>
+            <input type="text"
+                   pattern="^[0-9a-zA-Z].*"
+                   value=""
+                   id="new_password"
+                   name="new_password" required>
+          </div>
+          <div class="submit-buttons">
+            <input type="submit" value="Change">
+          </div>
+        </form>
+      </fieldset>
+    </div>
+
+    <div class="option bold">
+      {% block pw_response %}
+      <div>  </div>
+      {% endblock %}
+    </div>
+
+
+    <div class="option">
+      <fieldset>
+        <legend> Delete This User </legend>
+        <div style="width: 100%; text-align: center; margin-bottom: 1em;">
+          Enter the user's Mapshare ID for confirmation
+        </div>
         <form class="form-box" method="post"
               action="{{ url_for('delete_user') }}">
           <div style="display: none;">
@@ -165,11 +209,25 @@
                    name="mapshare_id"
                    readonly>
           </div>
+          <div class="form-entry">
+            <label for="delete_confirmation_id"> Mapshare ID: </label>
+            <input type="text"
+                   pattern="^[0-9a-zA-Z].*"
+                   value=""
+                   id="delete_confirmation_id"
+                   name="delete_comfirmation_id" required>
+          </div>
           <div class="submit-buttons">
             <input type="submit" value="Delete">
           </div>
         </form>
-        </fieldset>
+      </fieldset>
+    </div>
+
+    <div class="option bold">
+      {% block delete_response %}
+      <div> {{delete_result.message}} </div>
+      {% endblock %}
     </div>
   </body>
   

@@ -39,12 +39,23 @@ def delete_user():
 
     # get user form data
     current_mapshare_id = request.form.get('mapshare_id')
-    usr = User(mapshare_id=current_mapshare_id)
-    user_result = usr.exists()
+    entered_mapshare_id = request.form.get('delete_confirmation_id')
+    if entered_mapshare_id == current_mapshare_id:
+        usr = User(mapshare_id=current_mapshare_id)
+        user_result = usr.exists()
+        if not user_result.status:
+            return render_template("users.html", result=user_result)
+        return render_template("users.html", result=usr.delete())
 
-    if not user_result.status:
-        return render_template("users.html", result=user_result)
-    return render_template("users.html", result=usr.delete())
+    delete_res = Result(False, "Mapshare ID does not match")
+
+    return render_template("user_settings.html",
+                           user_result=user_result,
+                           radius_result=EMPTY_RESULT,
+                           state_result=EMPTY_RESULT,
+                           trip_result=EMPTY_RESULT,
+                           delete_result=delete_res,
+                           user=usr)
 
 
 @app.route('/register', methods=['POST'])
@@ -77,6 +88,7 @@ def set_user_alert_radius():
                            radius_result=radius_res,
                            state_result=EMPTY_RESULT,
                            trip_result=EMPTY_RESULT,
+                           delete_result=EMPTY_RESULT,
                            user=usr)
 
 
@@ -98,6 +110,7 @@ def update_user_states():
                            radius_result=EMPTY_RESULT,
                            state_result=state_res,
                            trip_result=EMPTY_RESULT,
+                           delete_result=EMPTY_RESULT,
                            user=usr)
 
 
@@ -154,6 +167,7 @@ def load_user_settings():
                                radius_result=EMPTY_RESULT,
                                state_result=EMPTY_RESULT,
                                trip_result=EMPTY_RESULT,
+                               delete_result=EMPTY_RESULT,
                                user=usr)
     else:
 
@@ -181,6 +195,7 @@ def add_trip():
                            radius_result=EMPTY_RESULT,
                            state_result=EMPTY_RESULT,
                            trip_result=trip_result,
+                           delete_result=EMPTY_RESULT,
                            user=usr)
 
 
@@ -204,6 +219,7 @@ def update_trip():
                            radius_result=EMPTY_RESULT,
                            state_result=EMPTY_RESULT,
                            trip_result=trip_result,
+                           delete_result=EMPTY_RESULT,
                            user=usr)
 
 
@@ -214,6 +230,7 @@ def delete_trip():
 
     # get user form data
     current_mapshare_id = request.form.get('mapshare_id')
+
     usr = User(mapshare_id=current_mapshare_id)
     user_result = usr.exists()
     trip_id = request.form.get('trip_id')
@@ -224,4 +241,5 @@ def delete_trip():
                            radius_result=EMPTY_RESULT,
                            state_result=EMPTY_RESULT,
                            trip_result=trip_result,
+                           delete_result=EMPTY_RESULT,
                            user=usr)
