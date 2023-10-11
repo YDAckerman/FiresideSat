@@ -461,6 +461,11 @@ class SqlQueries:
     OR      tsr.date_sent IS NULL);
     """
 
+    select_all_user_state_settings = """
+    SELECT setting_value FROM user_settings
+    WHERE setting_name = 'include_state';
+    """
+
     select_active_users = """
     SELECT users.user_id, trip_id, garmin_imei,
                           mapshare_id, mapshare_pw

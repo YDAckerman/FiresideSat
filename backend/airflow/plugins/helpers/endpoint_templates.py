@@ -16,7 +16,9 @@ WFIGS_CURRENT_INCIDENT_LOCATIONS_TEMPLATE = "WFIGS_Incident_" \
     + "Locations_Current" \
     + "/FeatureServer/0/" \
     + "query?f=json&" \
-    + "where=(POOState%20IN%20('US-CA'%2C'US-OR'%2C'US-WA'))&outFields=*"
+    + "where=(POOState%20IN%20('{states_str}'))&outFields=*"
+
+# 'US-CA'%2C'US-OR'%2C'US-WA'
 
 WFIGS_TEST_INCIDENT_LOCATIONS_ENPOINT = "WFIGS_Incident_Locations" \
     + "/FeatureServer/0/query?f=json&" \

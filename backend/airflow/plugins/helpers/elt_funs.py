@@ -16,14 +16,18 @@ def elt_wildfire_locations(endpoint, pg_conn, pg_cur, context, log):
 
     end_date = pendulum.from_format(start_date, "YYYY-MM-DD").add(days=1)
 
+    # state settings
+    pg_cur.execute(sql.select_all_user_state_settings)
+    states = pg_cur.fetchall()
+    states_formatted = "'%2C'".join(state[0] for state in states)
+
     endpoint.set_route(data_interval_start=start_date,
-                       data_interval_end=end_date.to_date_string())
+                       data_interval_end=end_date.to_date_string(),
+                       states_str=states_formatted)
 
     endpt_resp = json.loads(endpoint.get().text)
 
     if endpt_resp:
-
-        print(endpt_resp)
 
         # loop through features and
         # load each incident and its perimeter into postgres
@@ -103,7 +107,6 @@ def elt_aqi(endpoint, pg_conn, pg_cur, log, records, sql_query):
 
     pg_cur.execute(sql.select_airnow_api_key)
     airnow_key = pg_cur.fetchone()[0]
-    print(airnow_key)
 
     for record in records:
 
