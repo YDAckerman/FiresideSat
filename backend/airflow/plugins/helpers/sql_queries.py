@@ -1,31 +1,5 @@
 
-# TODO: varchar(256) is often unecessarily large
-
 class SqlQueries:
-
-    # def __init__(self, test=False):
-
-    #     if test:
-    #         schema = "test"
-    #     else:
-    #         schema = "public"
-
-    #     self.current_schema = schema
-    #     self.set_schema = f"SET search_path TO {schema};"
-    #     self.unset_schema = "SET search_path TO public;"
-    #     print(f"running sql queries on schema {schema}")
-
-    #     self.create_schema = f"""
-    #     CREATE SCHEMA IF NOT EXISTS {schema};
-    #     """
-
-    # set_test_search_path = """
-    # SET search_path TO test;
-    # """
-
-    # unset_test_search_path = """
-    # SET search_path TO public;
-    # """
 
     drop_current_tables = """
     DROP TABLE IF EXISTS current_incidents;
@@ -51,12 +25,11 @@ class SqlQueries:
     DROP TABLE IF EXISTS user_aqi_reports;
     """
 
-    # todo: change to admin_settings
-    drop_variable_table = """
+    drop_variables_table = """
     DROP TABLE IF EXISTS variables;
     """
 
-    create_variable_table = """
+    create_variables_table = """
     CREATE TABLE IF NOT EXISTS variables (
     name    varchar(256)   PRIMARY KEY,
     value   varchar(256)

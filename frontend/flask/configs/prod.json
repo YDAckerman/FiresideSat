@@ -1,7 +1,7 @@
 {
-    "DB_NAME" : "fireside_prod",
+    "DB_NAME" : "fireside",
     "DB_USER" : "root",
     "DB_PASSWORD" : "secret",
     "DB_PORT" : "5432",
-    "DB_HOST" : "0.0.0.0"
+    "DB_HOST" : "fireside_prod"
 }

@@ -92,6 +92,20 @@ create_report_tables = PostgresOperator(
     sql=sql.create_report_tables
 )
 
+drop_variables_table = PostgresOperator(
+    task_id="drop_variables_tables",
+    dag=dag,
+    postgres_conn_id="fireside",
+    sql=sql.drop_variables_table
+)
+
+create_variables_table = PostgresOperator(
+    task_id="create_variables_tables",
+    dag=dag,
+    postgres_conn_id="fireside",
+    sql=sql.create_variables_table
+)
+
 end_operator = DummyOperator(task_id='Stop_execution', dag=dag)
 
 # ##############################################
@@ -126,3 +140,10 @@ start_operator >> drop_report_tables
 drop_report_tables >> create_report_tables
 
 create_report_tables >> end_operator
+
+# variables table
+start_operator >> drop_variables_table
+
+drop_variables_table >> create_variables_table
+
+create_variables_table >> end_operator
