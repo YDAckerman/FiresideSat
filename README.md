@@ -25,10 +25,15 @@ your browser at localhost:3000.
 * Get an api key from
 [airnow.gov](https://docs.airnowapi.org/account/request/).
 * Clone this repository.
-* `cd` into FirsideSat and run `docker-compose build`
+* `cd` into FiresideSat.
+* Run `source ./bash/setup.sh`
+* Run `docker-compose up -d`
 
 ## Usage
 
-Coming soon
+* Navigate to localhost:3000 in your browser
+* Click on the 'dags' button in the navigation bar
+* Enter 'airflow' as both the username and password
+* tbd
 
   
