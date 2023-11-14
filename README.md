@@ -22,6 +22,10 @@ happy to assist.
 I am currently working on a browser-based frontend for the service
 to allow adding/modifying users and trips. 
 
+## Architecture
+
+![image Architecture](./architecture.png)
+
 ## Installation
 
 Coming soon
