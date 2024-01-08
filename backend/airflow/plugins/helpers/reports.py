@@ -3,9 +3,9 @@ from helpers.header_funs import get_auth_basic
 
 class Report:
 
-    def __init__(self, record, record_cols, message_template, save_sql):
+    def __init__(self, record, record_cols, message_template, save_sql, crypto):
 
-        self.report_data = self._make_report_data(record, record_cols)
+        self.report_data = self._make_report_data(record, record_cols, crypto)
         self.message = self.format_template(message_template)
         self.save_sql = save_sql
 
@@ -30,7 +30,7 @@ class Report:
     def get_recipient(self):
         return self.report_data['user_id']
 
-    def _make_report_data(self, record, record_cols):
+    def _make_report_data(self, record, record_cols, crypto):
 
         if len(record_cols) is not len(record):
             """
@@ -41,6 +41,7 @@ class Report:
             raise ValueError("Record names are misaligned.")
 
         report_data = dict(zip(record_cols, record))
+        report_data['mapshare_pw'] = crypto.decrypt(report_data['mapshare_pw'])
 
         return report_data
 

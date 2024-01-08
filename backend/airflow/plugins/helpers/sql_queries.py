@@ -32,8 +32,15 @@ class SqlQueries:
     create_variables_table = """
     CREATE TABLE IF NOT EXISTS variables (
     name    varchar(256)   PRIMARY KEY,
-    value   varchar(256)
+    value   TEXT
     );
+    """
+
+    reset_public_key = """
+    DELETE FROM variables WHERE name = 'rsa_public_key_pem';
+
+    INSERT INTO variables (name, value)
+    VALUES ('rsa_public_key_pem', %(pem)s);
     """
 
     create_report_tables = """
@@ -76,7 +83,7 @@ class SqlQueries:
     user_email         varchar(256),
     user_pw            varchar(256),
     mapshare_id        varchar(256)   UNIQUE NOT NULL,
-    mapshare_pw        varchar(256)   NOT NULL
+    mapshare_pw        TEXT           NOT NULL
     );
 
     CREATE TABLE IF NOT EXISTS devices (

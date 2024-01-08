@@ -4,6 +4,11 @@ class SqlQueries():
     def __init__(self):
         pass
 
+    get_rsa_pubkey = """
+    SELECT value FROM variables
+    WHERE name = 'rsa_public_key_pem';
+    """
+
     check_device_exists = """
     SELECT 1
     FROM devices
@@ -45,7 +50,7 @@ class SqlQueries():
     UPDATE SET
     value = EXCLUDED.value;
     """
-
+    
     select_user_trips = """
     SELECT trip_id, start_date, end_date
     FROM trips WHERE user_id = %(user_id)s

@@ -3,6 +3,10 @@ from .result import Result
 from .trip import Trip
 from .sql_queries import SqlQueries
 
+# https://cryptography.io/en/latest/hazmat/primitives/asymmetric/rsa/
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.asymmetric import padding
 from seleniumwire import webdriver
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.common.by import By
@@ -278,10 +282,28 @@ class User():
                          self.user_id,
                          Result(True, "User Settings Added"))
 
+    def _encrypt_creds(self):
+        pubkey_pem = db_extract(qrys.get_rsa_pubkey)[0][0]
+        pubkey = serialization.load_pem_public_key(
+            pubkey_pem,
+            password=None,
+        )
+        payload = self.credentials.copy()
+        payload['mapshare_password'] = pubkey.encrypt(
+            payload['mapshare_password'].encode(),
+            padding.OAEP(
+                mgf=padding.MFG1(algorithm=hashes.SHA256()),
+                algorithm=hashes.SHA256(),
+                label=None
+            )
+        )
+        return payload
+
     def _register(self):
         return db_submit(qrys.insert_new_usr,
-                         self.credentials,
-                         Result(True, "User Successfully Added To DB"))
+                         self._encrypt_creds(),
+                         Result(True, "User Successfully Added To DB")
+                         )
 
     def _register_device(self, garmin_id, device_imei):
 

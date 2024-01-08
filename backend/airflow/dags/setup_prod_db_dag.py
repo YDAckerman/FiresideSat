@@ -2,6 +2,7 @@ from datetime import datetime, timedelta
 from airflow import DAG
 from airflow.operators.dummy_operator import DummyOperator
 from airflow.operators.postgres_operator import PostgresOperator
+from operators.set_rsa_public_key import SetPublicKeyOperator
 # from airflow.operators.python_operator import PythonOperator
 from helpers.sql_queries import SqlQueries as sql
 
@@ -117,6 +118,11 @@ create_variables_table = PostgresOperator(
     sql=sql.create_variables_table
 )
 
+set_rsa_public_key = SetPublicKeyOperator(
+    task_id="set_rsa_public_key",
+    dag=dag,
+    postgres_conn_id=DB_NAME
+)
 
 end_operator = DummyOperator(task_id='Stop_execution', dag=dag)
 
@@ -157,5 +163,7 @@ create_report_tables >> end_operator
 start_operator >> drop_variables_table
 
 drop_variables_table >> create_variables_table
+
+create_variables_table >> set_rsa_public_key
 
 create_variables_table >> end_operator

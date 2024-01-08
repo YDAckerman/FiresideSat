@@ -1,6 +1,6 @@
 from helpers.report_templates import REPORTS_DICT
 from helpers.reports import Report
-
+from helpers.crypto import Crypto
 
 class ReportFactory():
 
@@ -15,12 +15,14 @@ class ReportFactory():
         self.report_type = report_type
         self.report_metadata = REPORTS_DICT[report_type]
         self.date_sent = date_sent
+        self.crypto = Crypto()
 
     def make_report(self, record):
         self.current_report = Report(record,
                                      self.report_metadata['columns'],
                                      self.report_metadata['message_template'],
-                                     self.report_metadata['save_sql'])
+                                     self.report_metadata['save_sql'],
+                                     self.crypto)
         return self.current_report
 
     def get_failure_message(self):
