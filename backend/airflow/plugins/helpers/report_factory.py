@@ -2,6 +2,7 @@ from helpers.report_templates import REPORTS_DICT
 from helpers.reports import Report
 from helpers.crypto import Crypto
 
+
 class ReportFactory():
 
     current_report = None

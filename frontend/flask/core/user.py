@@ -1,3 +1,5 @@
+import sys
+
 from .db import db_submit, db_submit_many, db_extract
 from .result import Result
 from .trip import Trip
@@ -199,6 +201,7 @@ class User():
 
         # attempt to get the device IMEI
         device_imei = self._get_device_imei(self.credentials)
+        # print(device_imei, file=sys.stdout)
 
         if device_imei is None:
             return INVALID_CREDS
@@ -217,7 +220,7 @@ class User():
         # populate their user_id
         usr_reg_res = self._register()
         if not usr_reg_res:
-            return usr_reg_res
+            return usr_reg_res.append(" User registration failed.")
         self.user_id = self._get_user_id()
 
         # register the device to the database
@@ -227,13 +230,13 @@ class User():
             # if something went wrong, delete the
             # row from the user table
             self.delete()
-            return dev_reg_res
+            return dev_reg_res.append(" Device registartion failed.")
         self.device_id = self._get_device_id()
 
         # set state and alert radius defaults
         settings_res = self._set_default_settings()
         if not settings_res.status:
-            return settings_res
+            return settings_res.append(" Failed to upload user settings.")
 
         # send success message
         return REG_SUCCESS
@@ -279,20 +282,20 @@ class User():
     def _set_default_settings(self):
 
         return db_submit(qrys.insert_default_settings,
-                         self.user_id,
+                         {'user_id': self.user_id},
                          Result(True, "User Settings Added"))
 
     def _encrypt_creds(self):
-        pubkey_pem = db_extract(qrys.get_rsa_pubkey)[0][0]
+        pubkey_pem = db_extract(qrys.get_rsa_pubkey, {})[0][0]
         pubkey = serialization.load_pem_public_key(
-            pubkey_pem,
-            password=None,
+            pubkey_pem.encode(),
+            None
         )
         payload = self.credentials.copy()
-        payload['mapshare_password'] = pubkey.encrypt(
-            payload['mapshare_password'].encode(),
+        payload['mapshare_pw'] = pubkey.encrypt(
+            payload['mapshare_pw'].encode(),
             padding.OAEP(
-                mgf=padding.MFG1(algorithm=hashes.SHA256()),
+                mgf=padding.MGF1(algorithm=hashes.SHA256()),
                 algorithm=hashes.SHA256(),
                 label=None
             )
@@ -353,6 +356,9 @@ class User():
         mapshare_id = credentials['mapshare_id']
         mapshare_pw = credentials['mapshare_pw']
 
+        # print(mapshare_id, file=sys.stdout)
+        # print(mapshare_pw, file=sys.stdout)
+
         try:
 
             fireFoxOptions = webdriver.FirefoxOptions()
@@ -399,7 +405,7 @@ class User():
             return post_params
 
         except Exception as e:
-            print(e)
+            print(e, file=sys.stderr)
             return None
 
     @staticmethod

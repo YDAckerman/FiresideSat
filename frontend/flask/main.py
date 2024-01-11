@@ -39,12 +39,14 @@ def delete_user():
 
     # get user form data
     current_mapshare_id = request.form.get('mapshare_id')
-    entered_mapshare_id = request.form.get('delete_confirmation_id')
+    entered_mapshare_id = request.form.get('confirmation_id')
+
+    usr = User(mapshare_id=current_mapshare_id)
+    user_result = usr.exists()
+    if not user_result.status:
+        return render_template("users.html", result=user_result)
+
     if entered_mapshare_id == current_mapshare_id:
-        usr = User(mapshare_id=current_mapshare_id)
-        user_result = usr.exists()
-        if not user_result.status:
-            return render_template("users.html", result=user_result)
         return render_template("users.html", result=usr.delete())
 
     delete_res = Result(False, "Mapshare ID does not match")
@@ -65,7 +67,7 @@ def register():
 
     usr = User(request.form.get('mapshare_id'),
                request.form.get('mapshare_password'))
-    register_result = usr.register(debug=app.config['DEBUG'])
+    register_result = usr.register(debug=False)
 
     return render_template("admin.html", result=register_result)
 

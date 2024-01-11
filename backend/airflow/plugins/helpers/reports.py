@@ -41,7 +41,8 @@ class Report:
             raise ValueError("Record names are misaligned.")
 
         report_data = dict(zip(record_cols, record))
-        report_data['mapshare_pw'] = crypto.decrypt(report_data['mapshare_pw'])
+        report_data['mapshare_pw'] = crypto.decrypt(
+            report_data['mapshare_pw'])
 
         return report_data
 

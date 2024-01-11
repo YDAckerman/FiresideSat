@@ -83,7 +83,7 @@ class SqlQueries:
     user_email         varchar(256),
     user_pw            varchar(256),
     mapshare_id        varchar(256)   UNIQUE NOT NULL,
-    mapshare_pw        TEXT           NOT NULL
+    mapshare_pw        bytea          NOT NULL
     );
 
     CREATE TABLE IF NOT EXISTS devices (
