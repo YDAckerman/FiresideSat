@@ -1,3 +1,4 @@
+
 from flask import Flask, render_template, request
 from core.result import Result
 from core.user import User

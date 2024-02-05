@@ -201,7 +201,6 @@ class User():
 
         # attempt to get the device IMEI
         device_imei = self._get_device_imei(self.credentials)
-        # print(device_imei, file=sys.stdout)
 
         if device_imei is None:
             return INVALID_CREDS
